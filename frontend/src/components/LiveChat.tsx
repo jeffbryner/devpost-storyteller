@@ -37,11 +37,12 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
             ws.onmessage = async (event) => {
                 if (typeof event.data === 'string') {
                     // Received text (e.g., JSON structure or conversational text)
-                    const text = event.data;
-                    setMessages((prev) => [...prev, `Gemini: ${text}`]);
+                    const story = event.data;
+                    console.log("STORY :", story);
+                    setMessages((prev) => [...prev, `Gemini: ${story}`]);
 
                     try {
-                        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/(\{[\s\S]*\})/);
+                        const jsonMatch = story.match(/```json\s*([\s\S]*?)\s*```/) || story.match(/(\{[\s\S]*\})/);
                         if (jsonMatch) {
                             const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
                             if (parsed.steps && onStepsReceived) {
@@ -49,7 +50,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                             }
                         }
                     } catch (e) {
-                        // ignore parse errors
+                        // parse errors
+                        console.error("Error parsing JSON from assistant message", e);
                     }
                 } else if (event.data instanceof ArrayBuffer) {
                     // Directly play the raw binary ArrayBuffer

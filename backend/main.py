@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import os
+import json
 from google import genai
 from google.genai import types
 from storyboard import router as storyboard_router
@@ -47,22 +48,20 @@ async def websocket_ideate(websocket: WebSocket):
 
         Args:
             steps: A list of objects, each containing a 'title', 'description', and 'image_prompt'.
+            websocket: The WebSocket connection to the frontend, which you can use to send the generated storyboard steps back to the client in real-time as you generate them.
         """
-        import json
-        import asyncio
-
         json_str = json.dumps({"steps": steps})
         logger.info(f"DEBUG: generate_storyboard called with {len(steps)} steps")
-        # Schedule the websocket send
-        loop = asyncio.get_event_loop()
-        loop.create_task(websocket.send_text(f"```json\n{json_str}\n```"))
+        # # Schedule the websocket send (doesn't work to do it directly in this function since it's called synchronously by the Gemini response generator, but we need to send the data asynchronously)
+        # loop = asyncio.get_event_loop()
+        # loop.create_task(websocket.send_text(f"```json\n{json_str}\n```"))
         return {"result": "success"}
 
-    fn_decl = types.FunctionDeclaration.from_callable(
-        callable=generate_storyboard,
-        client=ai_client,
-        behavior=types.Behavior.NON_BLOCKING,
-    )
+    # fn_decl = types.FunctionDeclaration.from_callable(
+    #     callable=generate_storyboard,
+    #     client=ai_client,
+    #     behavior=types.Behavior.NON_BLOCKING,
+    # )
     # config: types.LiveConnectConfigDict = {
     #     "response_modalities": [types.Modality.AUDIO],
     #     "system_instruction": {"parts": [{"text": system_instruction}]},
@@ -71,7 +70,7 @@ async def websocket_ideate(websocket: WebSocket):
     config = types.LiveConnectConfig(
         response_modalities=[types.Modality.AUDIO],
         system_instruction=system_instruction,
-        tools=[fn_decl, get_current_time_and_date],
+        tools=[generate_storyboard, get_current_time_and_date],
     )
 
     try:
@@ -117,9 +116,9 @@ async def websocket_ideate(websocket: WebSocket):
                                     logger.info(
                                         f"DEBUG: Gemini response turn COMPLETE {server_content}"
                                     )
-                                    logger.info(
-                                        f"DEBUG: Full response content: {response}"
-                                    )
+                                    # logger.info(
+                                    #     f"DEBUG: Full response content: {response}"
+                                    # )
                                 # ---------------------------------------
 
                                 model_turn = server_content.model_turn
@@ -128,9 +127,9 @@ async def websocket_ideate(websocket: WebSocket):
                                     and model_turn.parts is not None
                                 ):
                                     for part in model_turn.parts:
-                                        logger.info(
-                                            f"DEBUG: Received part. text: {bool(part.text)}, inline_data: {bool(part.inline_data)}, function_call: {bool(part.function_call)}"
-                                        )
+                                        # logger.info(
+                                        #     f"DEBUG: Received part. text: {bool(part.text)}, inline_data: {bool(part.inline_data)}, function_call: {bool(part.function_call)}"
+                                        # )
                                         if part.inline_data and part.inline_data.data:
                                             await websocket.send_bytes(
                                                 part.inline_data.data
@@ -140,33 +139,39 @@ async def websocket_ideate(websocket: WebSocket):
                                                 f"DEBUG: Text content: {part.text}"
                                             )
                                             await websocket.send_text(part.text)
-                                        if part.function_call:
-                                            logger.info(
-                                                f"DEBUG: Function call: {part.function_call}"
-                                            )
-                                            if (
-                                                part.function_call.name
-                                                == "generate_storyboard"
-                                            ):
-                                                # The `live` API gives us the function call, but we have to execute it.
-                                                # The arguments are in `part.function_call.args`.
-                                                function_result = generate_storyboard(
-                                                    **part.function_call.args
-                                                )
+                                        # if part.function_call:
+                                        #     logger.info(
+                                        #         f"DEBUG: Function call: {part.function_call}"
+                                        #     )
+                                        #     if (
+                                        #         part.function_call.name
+                                        #         == "generate_storyboard"
+                                        #     ):
+                                        #         # The `live` API gives us the function call, but we have to execute it.
+                                        #         # The arguments are in `part.function_call.args`.
+                                        #         function_result = generate_storyboard(
+                                        #             **part.function_call.args
+                                        #         )
 
-                                                # Send the result of the function call back to Gemini
-                                                await session.send(
-                                                    function_responses=[
-                                                        {
-                                                            "id": part.function_call.id,
-                                                            "name": part.function_call.name,
-                                                            "response": function_result,
-                                                        }
-                                                    ],
-                                                    end_of_turn=True,
-                                                )
+                                        #         # Send the result of the function call back to Gemini
+                                        #         await session.send(
+                                        #             function_responses=[
+                                        #                 {
+                                        #                     "id": part.function_call.id,
+                                        #                     "name": part.function_call.name,
+                                        #                     "response": function_result,
+                                        #                 }
+                                        #             ],
+                                        #             end_of_turn=True,
+                                        #         )
                             if response.tool_call:
                                 logger.info("TOOLS were called")
+                                loop = asyncio.get_event_loop()
+                                loop.create_task(
+                                    websocket.send_text(
+                                        f"TOOLS CALLED: {response.tool_call}"
+                                    )
+                                )
                                 function_responses = []
                                 for fc in response.tool_call.function_calls:
                                     function_response = types.FunctionResponse(
@@ -180,6 +185,14 @@ async def websocket_ideate(websocket: WebSocket):
                                     logger.info(
                                         f"DEBUG: Tool call for function {fc.name} with args {fc.args}"
                                     )
+                                    if fc.name == "generate_storyboard":
+                                        json_str = json.dumps(fc.args["steps"])
+                                        loop = asyncio.get_event_loop()
+                                        loop.create_task(
+                                            websocket.send_text(
+                                                f"```json\n{json_str}\n```"
+                                            )
+                                        )
 
                                 await session.send_tool_response(
                                     function_responses=function_responses

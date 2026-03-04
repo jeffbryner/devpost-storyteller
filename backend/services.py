@@ -6,8 +6,13 @@ from google.genai import types
 import google.auth
 import logging
 from datetime import datetime
+import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    stream=sys.stdout,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 # ignore websocket debug logs
 logging.getLogger("websockets").setLevel(logging.INFO)
 logger = logging.getLogger()
@@ -38,7 +43,9 @@ def get_current_time_and_date() -> str:
     Returns the current day of the week, month, day, and year.
     Use this when the user asks for the current date or time.
     """
-    # Example format: "Wednesday, March 04, 2026"
+    # Example format: "Monday, March 01, 2026"
+    logger.info("TOOL get_current_time_and_date called")
+    print("TOOL get_current_time_and_date called", flush=True)
     return datetime.now().strftime("%A, %B %d, %Y")
 
 
