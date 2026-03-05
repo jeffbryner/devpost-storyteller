@@ -1,12 +1,14 @@
+import sys
 import os
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import firestore, storage
 from google import genai
 from google.genai import types
 import google.auth
 import logging
 from datetime import datetime
-import sys
+
+from dotenv import load_dotenv
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -16,6 +18,8 @@ logging.basicConfig(
 # ignore websocket debug logs
 logging.getLogger("websockets").setLevel(logging.INFO)
 logger = logging.getLogger()
+
+load_dotenv()
 credentials, PROJECT_ID = google.auth.default()
 
 # Initialize Firebase Admin
@@ -28,10 +32,10 @@ bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")
 
 # Initialize Google GenAI (Vertex AI) client
 # Project: prj-devpost-athon-adf
-project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "prj-devpost-athon-adf")
+project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
 
-IMAGE_MODEL = "gemini-2.5-flash-image"
+IMAGE_MODEL = "gemini-3-pro-image-preview"
 MODEL = "gemini-3.1-pro-preview"
 LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 
@@ -44,36 +48,7 @@ def get_current_time_and_date() -> str:
     Use this when the user asks for the current date or time.
     """
     # Example format: "Monday, March 01, 2026"
-    logger.info("TOOL get_current_time_and_date called")
-    print("TOOL get_current_time_and_date called", flush=True)
     return datetime.now().strftime("%A, %B %d, %Y")
-
-
-def generate_image(prompt):
-    try:
-        response = ai_client.models.generate_content(
-            model=IMAGE_MODEL,
-            contents=[prompt],
-            config=types.GenerateContentConfig(
-                response_modalities=["Image"],
-                temperature=2.0,
-                image_config=types.ImageConfig(
-                    aspect_ratio="1:1", person_generation="ALLOW_ADULT"
-                ),
-            ),
-        )
-
-        returned_image = None
-        for part in response.parts or []:
-            if part.text is not None:
-                print(part.text)
-            elif part.inline_data is not None:
-                image = part.as_image()
-                returned_image = image
-        return returned_image
-    except Exception as e:
-        logger.error(f"Generate_Image: Error generating image: {e}")
-        return None
 
 
 def generate_storyboard_image(steps: list, theme: str):
@@ -93,14 +68,17 @@ def generate_storyboard_image(steps: list, theme: str):
         num_panels = len(steps)
 
         prompt = (
-            f"A child-friendly, safe-for-all-ages {theme} style comic strip "
+            f"A child-friendly, safe-for-all-ages {theme} style storyboard "
             f"illustration divided into {num_panels} sequential panels telling "
             f"a positive visual story:\n\n{panels_text}"
         )
 
         logger.info(f"Generating storyboard image with prompt: {prompt}")
-
-        response = ai_client.models.generate_content(
+        # use a project with quota/apikey for the image model
+        ai_image_client = genai.Client(
+            vertexai=True, api_key=os.environ.get("GOOGLE_CLOUD_IMAGE_API_KEY")
+        )
+        response = ai_image_client.models.generate_content(
             model=IMAGE_MODEL,
             contents=[prompt],
             config=types.GenerateContentConfig(
@@ -125,7 +103,9 @@ def generate_storyboard_image(steps: list, theme: str):
                     ),
                 ],
                 image_config=types.ImageConfig(
-                    aspect_ratio="1:1", person_generation="ALLOW_ALL"
+                    person_generation="ALLOW_ALL",
+                    image_size="1K",
+                    output_mime_type="image/png",
                 ),
             ),
         )
@@ -144,11 +124,11 @@ def generate_storyboard_image(steps: list, theme: str):
             logger.warning("GEMINI response has no candidates!")
         if hasattr(response, "prompt_feedback"):
             logger.info(f"GEMINI prompt_feedback: {response.prompt_feedback}")
-        logger.info(f"GEMINI response.parts: {response.parts}")
+        # logger.info(f"GEMINI response.parts: {response.parts}")
 
         returned_image = None
         for part in response.parts or []:
-            logger.info(f"GEMINI Received part: {part}")
+            # logger.info(f"GEMINI Received part: {part}")
             if part.text is not None:
                 print(part.text)
             elif part.inline_data is not None:

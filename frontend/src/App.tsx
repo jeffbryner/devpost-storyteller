@@ -84,9 +84,9 @@ const Home: React.FC = () => {
               onChange={(e) => setTheme(e.target.value)}
               style={{ padding: '5px' }}
             >
-              <option value="Cartoon">Cartoon</option>
+              <option value="Black and White Cartoon">Black and White Cartoon</option>
               <option value="Superhero">Superhero</option>
-              <option value="Sketch">Sketch</option>
+              <option value="Pencil Sketch">Pencil Sketch</option>
             </select>
           </div>
 

@@ -1,16 +1,18 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import os
 import json
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from storyboard import router as storyboard_router
 from services import MODEL, LIVE_MODEL, ai_client, logger, get_current_time_and_date
 from pydantic import BaseModel
 from typing import Optional, List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 
+# TODO: move models to a central file
 class StoryboardStep(BaseModel):
     id: Optional[str] = None
     title: Optional[str] = None
@@ -49,7 +51,7 @@ async def websocket_ideate(websocket: WebSocket):
     system_instruction = (
         "You are an assistant helping a parent storyboard an upcoming event for an autistic child. "
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
-        "When enough details are gathered, you MUST call the `generate_storyboard` function. "
+        "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a title, description, and image_prompt. "
         "When asked what day it is, use the `get_current_time_and_date` function to get the current date and time. "
     )
 
@@ -67,16 +69,13 @@ async def websocket_ideate(websocket: WebSocket):
         # loop.create_task(websocket.send_text(f"```json\n{json_str}\n```"))
         return json_str
 
+    # TODO: occasional malformed function call in logs, might need to declare it explicitly
     # fn_decl = types.FunctionDeclaration.from_callable(
     #     callable=generate_storyboard,
     #     client=ai_client,
     #     behavior=types.Behavior.NON_BLOCKING,
     # )
-    # config: types.LiveConnectConfigDict = {
-    #     "response_modalities": [types.Modality.AUDIO],
-    #     "system_instruction": {"parts": [{"text": system_instruction}]},
-    #     "tools": [fn_decl.to_json_dict()],
-    # }
+
     config = types.LiveConnectConfig(
         response_modalities=[types.Modality.AUDIO],
         system_instruction=system_instruction,
@@ -149,31 +148,7 @@ async def websocket_ideate(websocket: WebSocket):
                                                 f"DEBUG: Text content: {part.text}"
                                             )
                                             await websocket.send_text(part.text)
-                                        # if part.function_call:
-                                        #     logger.info(
-                                        #         f"DEBUG: Function call: {part.function_call}"
-                                        #     )
-                                        #     if (
-                                        #         part.function_call.name
-                                        #         == "generate_storyboard"
-                                        #     ):
-                                        #         # The `live` API gives us the function call, but we have to execute it.
-                                        #         # The arguments are in `part.function_call.args`.
-                                        #         function_result = generate_storyboard(
-                                        #             **part.function_call.args
-                                        #         )
 
-                                        #         # Send the result of the function call back to Gemini
-                                        #         await session.send(
-                                        #             function_responses=[
-                                        #                 {
-                                        #                     "id": part.function_call.id,
-                                        #                     "name": part.function_call.name,
-                                        #                     "response": function_result,
-                                        #                 }
-                                        #             ],
-                                        #             end_of_turn=True,
-                                        #         )
                             if response.tool_call:
                                 logger.info("TOOLS were called")
                                 loop = asyncio.get_event_loop()
