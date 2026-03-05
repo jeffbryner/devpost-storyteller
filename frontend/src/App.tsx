@@ -85,7 +85,7 @@ const Home: React.FC = () => {
               style={{ padding: '5px' }}
             >
               <option value="Cartoon">Cartoon</option>
-              <option value="Realistic">Realistic</option>
+              <option value="Superhero">Superhero</option>
               <option value="Sketch">Sketch</option>
             </select>
           </div>
