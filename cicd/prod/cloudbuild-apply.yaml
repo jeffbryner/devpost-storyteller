@@ -1,0 +1,67 @@
+steps:
+  # ---------------------------------------------------------
+  # Verify Substitutions & Identity
+  # Some debug/environment output
+  # ---------------------------------------------------------
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "******************************************************"
+        echo "Build Triggered Successfully!"
+        echo "commit sha: $COMMIT_SHA"
+        echo "built from branch: $BRANCH_NAME"
+        echo "project id: $PROJECT_ID"
+        echo "******************************************************"
+        echo "Currently running as:"
+        gcloud auth list
+        echo "******************************************************"
+        echo "Checking access to Cloud Storage..."
+        gsutil ls gs:// || echo "WARNING: Could not list buckets. Check permissions."
+        ## position our tfvars file retrieved from secret manager
+        echo "Retrieving terraform.tfvars from Secret Manager..."
+        gcloud secrets versions access latest \
+                  --secret="tfvars" \
+                  --project="$PROJECT_ID" > cicd/prod/terraform.auto.tfvars
+        ## extract bucket name from tfvars for backend config
+        BUCKET_NAME=$(grep 'bucket' cicd/prod/terraform.auto.tfvars | awk -F'"' '{print $$2}')
+        echo "Found Bucket: $$BUCKET_NAME"
+        echo "$$BUCKET_NAME" > /workspace/backend_bucket.txt
+  # ---------------------------------------------------------
+  # Gcloud/Terraform apply
+  # ---------------------------------------------------------   
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    dir: 'cicd/prod'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # 1. Install utilities needed to download Terraform
+        # (The slim image needs these; standard might have them but this is safer)
+        apt-get -y update && apt-get -y install unzip wget
+
+        # 2. Download Terraform (Change version 1.5.7 to whatever you use)
+        wget -q https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
+
+        # 3. Unzip and move to path
+        unzip terraform_1.5.7_linux_amd64.zip
+        mv terraform /usr/bin/terraform
+        chmod +x /usr/bin/terraform
+
+        # 4. Verify both work
+        echo "Terraform Version:"
+        terraform --version
+        echo "Gcloud Version:"
+        gcloud --version
+        gcloud auth list
+
+        TF_BUCKET=$(cat /workspace/backend_bucket.txt)
+        echo "Running Terraform Init..."
+        terraform init \
+          -backend-config="bucket=$${TF_BUCKET}"
+        echo "APPLYING Terraform..."
+        terraform apply -auto-approve
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,48 @@
+steps:
+  # ---------------------------------------------------------
+  # Verify Substitutions & Identity
+  # Some debug/environment output
+  # ---------------------------------------------------------
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "******************************************************"
+        echo "Build Triggered Successfully!"
+        echo "commit sha: $COMMIT_SHA"
+        echo "built from branch: $BRANCH_NAME"
+        echo "project id: $PROJECT_ID"
+        echo "******************************************************"
+        echo "Currently running as:"
+        gcloud auth list
+        echo "******************************************************"
+        echo "Checking access to Cloud Storage..."
+        gsutil ls gs:// || echo "WARNING: Could not list buckets. Check permissions."
+        ## position our tfvars file retrieved from secret manager
+        echo "Retrieving terraform.tfvars from Secret Manager..."
+        gcloud secrets versions access latest \
+                  --secret="tfvars" \
+                  --project="$PROJECT_ID" > cicd/prod/terraform.auto.tfvars
+        ## extract bucket name from tfvars for backend config
+        BUCKET_NAME=$(grep 'bucket' cicd/prod/terraform.auto.tfvars | awk -F'"' '{print $$2}')
+        echo "Found Bucket: $$BUCKET_NAME"
+        echo "$$BUCKET_NAME" > /workspace/backend_bucket.txt
+  # ---------------------------------------------------------
+  # Terraform Init
+  # ---------------------------------------------------------   
+  - name: 'hashicorp/terraform:light'
+    dir: 'cicd/prod'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        TF_BUCKET=$(cat /workspace/backend_bucket.txt)
+        echo "Running Terraform Init..."
+        terraform init \
+          -backend-config="bucket=$${TF_BUCKET}"
+        echo "Running Terraform Plan..."
+        terraform plan
+
+options:
+  logging: CLOUD_LOGGING_ONLY
