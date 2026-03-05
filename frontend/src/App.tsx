@@ -12,7 +12,11 @@ const Home: React.FC = () => {
   const [generatedId, setGeneratedId] = useState<string | null>(null);
 
   const handleStepsReceived = (newSteps: Step[]) => {
-    setSteps(newSteps);
+    // Defensive parsing: ensure each step is a proper object, not a JSON string
+    const parsed = newSteps.map(step =>
+      (typeof step === 'string') ? JSON.parse(step) : step
+    );
+    setSteps(parsed);
   };
 
   const handleGenerate = async () => {
@@ -20,6 +24,11 @@ const Home: React.FC = () => {
 
     setIsGenerating(true);
     setError(null);
+
+    // Sanitize steps data: Ensure each step is an object, not a string.
+    const processedSteps = steps.map(step =>
+      (typeof step === 'string') ? JSON.parse(step) : step
+    );
 
     try {
       const response = await fetch('http://localhost:8000/api/storyboard', {
@@ -29,7 +38,7 @@ const Home: React.FC = () => {
         },
         body: JSON.stringify({
           theme: theme,
-          steps: steps
+          steps: processedSteps
         })
       });
 

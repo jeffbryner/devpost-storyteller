@@ -7,6 +7,16 @@ from google import genai
 from google.genai import types
 from storyboard import router as storyboard_router
 from services import MODEL, LIVE_MODEL, ai_client, logger, get_current_time_and_date
+from pydantic import BaseModel
+from typing import Optional, List
+
+
+class StoryboardStep(BaseModel):
+    id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image_prompt: Optional[str] = None
+
 
 app = FastAPI(title="Autism Event Storyboard API")
 
@@ -43,19 +53,19 @@ async def websocket_ideate(websocket: WebSocket):
         "When asked what day it is, use the `get_current_time_and_date` function to get the current date and time. "
     )
 
-    def generate_storyboard(steps: list[dict]) -> dict:
+    def generate_storyboard(steps: list[StoryboardStep]) -> str:
         """Call this function when you have gathered enough details from the user to generate the storyboard. Pass the generated steps as arguments.
 
         Args:
             steps: A list of objects, each containing a 'title', 'description', and 'image_prompt'.
-            websocket: The WebSocket connection to the frontend, which you can use to send the generated storyboard steps back to the client in real-time as you generate them.
+
         """
         json_str = json.dumps({"steps": steps})
         logger.info(f"DEBUG: generate_storyboard called with {len(steps)} steps")
         # # Schedule the websocket send (doesn't work to do it directly in this function since it's called synchronously by the Gemini response generator, but we need to send the data asynchronously)
         # loop = asyncio.get_event_loop()
         # loop.create_task(websocket.send_text(f"```json\n{json_str}\n```"))
-        return {"result": "success"}
+        return json_str
 
     # fn_decl = types.FunctionDeclaration.from_callable(
     #     callable=generate_storyboard,
@@ -185,13 +195,29 @@ async def websocket_ideate(websocket: WebSocket):
                                     logger.info(
                                         f"DEBUG: Tool call for function {fc.name} with args {fc.args}"
                                     )
-                                    if fc.name == "generate_storyboard":
-                                        json_str = json.dumps(fc.args["steps"])
+                                    if fc.name == "generate_storyboard" and fc.args:
+                                        # Normalize steps: ensure each is a proper dict
+                                        raw_steps = fc.args["steps"]
+                                        normalized_steps = []
+                                        for s in raw_steps:
+                                            if isinstance(s, str):
+                                                normalized_steps.append(json.loads(s))
+                                            elif isinstance(s, dict):
+                                                normalized_steps.append(s)
+                                            else:
+                                                normalized_steps.append(dict(s))
+                                        logger.info(
+                                            f"DEBUG: Normalized {len(normalized_steps)} steps for storyboard"
+                                        )
+                                        storyboard_data = {
+                                            "type": "storyboard_steps",
+                                            "payload": normalized_steps,
+                                        }
+                                        # Use send_json to send the Python dict directly.
+                                        # FastAPI will serialize it to JSON.
                                         loop = asyncio.get_event_loop()
                                         loop.create_task(
-                                            websocket.send_text(
-                                                f"```json\n{json_str}\n```"
-                                            )
+                                            websocket.send_json(storyboard_data)
                                         )
 
                                 await session.send_tool_response(
