@@ -7,7 +7,7 @@ import './App.css';
 
 const Home: React.FC = () => {
   const [steps, setSteps] = useState<Step[] | null>(null);
-  const [theme, setTheme] = useState<string>('Cartoon');
+  const [theme, setTheme] = useState<string>('Black and White Cartoon');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedId, setGeneratedId] = useState<string | null>(null);
