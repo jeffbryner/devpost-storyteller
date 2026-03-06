@@ -51,12 +51,11 @@ async def websocket_ideate(websocket: WebSocket):
 
         Args:
             steps: A list of StoryboardStep objects, each must contain a 'title', 'description', and 'image_prompt'.
-            The class definition is:
-            class StoryboardStep(BaseModel):
-                id: Optional[int] = None
-                title: str = ""
-                description: str = ""
-                image_prompt: str = ""
+        The class definition is:
+        class StoryboardStep(BaseModel):
+            title: str
+            description: str
+            image_prompt: str
 
         """
         json_str = json.dumps({"steps": steps})
