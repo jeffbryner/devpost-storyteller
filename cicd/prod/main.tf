@@ -208,3 +208,36 @@ resource "google_project_iam_member" "ai_access" {
   role     = "roles/aiplatform.user"
   member   = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
+
+
+# front end cloud run service.
+resource "google_cloud_run_service" "frontend" {
+  name                       = "${local.service_name}-frontend"
+  location                   = local.location
+  project                    = local.project_id
+  autogenerate_revision_name = true
+
+  # environment variables for the backend service URL as deployed.
+  template {
+    spec {
+      service_account_name = google_service_account.cloudrun_service_identity.email
+      containers {
+        image = terraform_data.frontend_build.output
+        env {
+          name  = "API_BASE_URL"
+          value = google_cloud_run_service.backend.status[0].url
+        }
+      }
+
+
+    }
+  }
+}
+
+resource "google_cloud_run_service_iam_policy" "noauth_frontend" {
+  location = google_cloud_run_service.frontend.location
+  project  = local.project_id
+  service  = google_cloud_run_service.frontend.name
+
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
