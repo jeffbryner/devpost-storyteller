@@ -71,7 +71,7 @@ const Home: React.FC = () => {
           <ul style={{ textAlign: 'left' }}>
             {steps.map((step, idx) => (
               <li key={idx} style={{ marginBottom: '10px' }}>
-                <strong>{step.title}</strong>
+                <strong>{step.step_title}</strong>
                 <p style={{ margin: '5px 0' }}>{step.description}</p>
               </li>
             ))}

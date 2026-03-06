@@ -42,7 +42,7 @@ async def websocket_ideate(websocket: WebSocket):
     system_instruction = (
         "You are an assistant helping a parent storyboard an upcoming event for an autistic child. "
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
-        "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a title, description, and image_prompt. "
+        "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a step_title, description, and image_prompt. "
         "When asked what day it is, use the `get_current_time_and_date` function to get the current date and time. "
     )
 
@@ -50,21 +50,59 @@ async def websocket_ideate(websocket: WebSocket):
         """Call this function when you have gathered enough details from the user to generate the storyboard. Pass the generated steps as arguments.
 
         Args:
-            steps: A list of StoryboardStep objects, each must contain a 'title', 'description', and 'image_prompt'.
+            steps: A list of StoryboardStep objects, each MUST contain a
+             - 'step_title'
+             - 'description'
+             - 'image_prompt'.
         The class definition is:
         class StoryboardStep(BaseModel):
-            title: str
+            step_title: str
             description: str
             image_prompt: str
 
+        Returns:
+            A JSON string with "result": true if all steps are valid,
+            or "result": false with "errors" describing what's wrong so you can retry.
         """
-        json_str = json.dumps({"steps": steps})
-        # logger doesn't work in this function since it's called synchronously by the Gemini response generator
-        logger.info(f"DEBUG: generate_storyboard called with {len(steps)} steps")
-        # # Schedule the websocket send (doesn't work to do it directly in this function since it's called synchronously by the Gemini response generator, but we need to send the data asynchronously)
-        # loop = asyncio.get_event_loop()
-        # loop.create_task(websocket.send_text(f"```json\n{json_str}\n```"))
-        return json_str
+        required_fields = {"step_title", "description", "image_prompt"}
+        errors = []
+
+        for i, step in enumerate(steps):
+            # Handle step as dict or Pydantic model
+            step_data = (
+                step
+                if isinstance(step, dict)
+                else (step.model_dump() if hasattr(step, "model_dump") else dict(step))
+            )
+            missing = required_fields - set(step_data.keys())
+            empty = {
+                f
+                for f in required_fields
+                if f in step_data and not str(step_data[f]).strip()
+            }
+
+            if missing:
+                # Check for common field name mistakes
+                if "step_title" in missing and "title" in step_data:
+                    errors.append(
+                        f"Step {i+1}: used 'title' instead of 'step_title'. Please use 'step_title' as the field name."
+                    )
+                    missing = missing - {"step_title"}
+                if missing:
+                    errors.append(
+                        f"Step {i+1}: missing required fields: {', '.join(sorted(missing))}"
+                    )
+            if empty:
+                errors.append(
+                    f"Step {i+1}: empty required fields: {', '.join(sorted(empty))}"
+                )
+
+        if errors:
+            logger.info(f"generate_storyboard validation FAILED: {errors}")
+            return json.dumps({"result": False, "errors": errors})
+
+        logger.info(f"generate_storyboard validation PASSED with {len(steps)} steps")
+        return json.dumps({"result": True, "steps": steps})
 
     # TODO: occasional malformed function call in logs, might need to declare it explicitly
     # fn_decl = types.FunctionDeclaration.from_callable(
@@ -155,21 +193,13 @@ async def websocket_ideate(websocket: WebSocket):
                                     )
                                 )
                                 function_responses = []
-                                for fc in response.tool_call.function_calls:
-                                    function_response = types.FunctionResponse(
-                                        id=fc.id,
-                                        name=fc.name,
-                                        response={
-                                            "result": "ok"
-                                        },  # simple, hard-coded function response
-                                    )
-                                    function_responses.append(function_response)
+                                for fc in response.tool_call.function_calls or []:
                                     logger.info(
                                         f"DEBUG: Tool call for function {fc.name} with args {fc.args}"
                                     )
                                     if fc.name == "generate_storyboard" and fc.args:
                                         # Normalize steps: ensure each is a proper dict
-                                        raw_steps = fc.args["steps"]
+                                        raw_steps = fc.args.get("steps", [])
                                         normalized_steps = []
                                         for s in raw_steps:
                                             if isinstance(s, str):
@@ -180,19 +210,47 @@ async def websocket_ideate(websocket: WebSocket):
                                                 normalized_steps.append(s)
                                             else:
                                                 normalized_steps.append(dict(s))
-                                        logger.info(
-                                            f"DEBUG: Normalized {len(normalized_steps)} steps for storyboard"
+
+                                        # Validate steps using the function
+                                        validation_result_str = generate_storyboard(
+                                            normalized_steps
                                         )
-                                        storyboard_data = {
-                                            "type": "storyboard_steps",
-                                            "payload": normalized_steps,
-                                        }
-                                        # Use send_json to send the Python dict directly.
-                                        # FastAPI will serialize it to JSON.
-                                        loop = asyncio.get_event_loop()
-                                        loop.create_task(
-                                            websocket.send_json(storyboard_data)
+                                        validation_result = json.loads(
+                                            validation_result_str
                                         )
+
+                                        # Send the validation result back to Gemini
+                                        function_response = types.FunctionResponse(
+                                            id=fc.id,
+                                            name=fc.name,
+                                            response=validation_result,
+                                        )
+                                        function_responses.append(function_response)
+
+                                        if validation_result.get("result") is True:
+                                            logger.info(
+                                                f"DEBUG: Validation passed, sending {len(normalized_steps)} steps to frontend"
+                                            )
+                                            storyboard_data = {
+                                                "type": "storyboard_steps",
+                                                "payload": normalized_steps,
+                                            }
+                                            loop = asyncio.get_event_loop()
+                                            loop.create_task(
+                                                websocket.send_json(storyboard_data)
+                                            )
+                                        else:
+                                            logger.info(
+                                                f"DEBUG: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
+                                            )
+                                    else:
+                                        # For other tool calls (e.g. get_current_time_and_date), use simple ok response
+                                        function_response = types.FunctionResponse(
+                                            id=fc.id,
+                                            name=fc.name,
+                                            response={"result": "ok"},
+                                        )
+                                        function_responses.append(function_response)
 
                                 await session.send_tool_response(
                                     function_responses=function_responses

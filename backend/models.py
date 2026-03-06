@@ -3,7 +3,7 @@ from typing import Optional, List
 
 
 class StoryboardStep(BaseModel):
-    title: str
+    step_title: str
     description: str
     image_prompt: str
 

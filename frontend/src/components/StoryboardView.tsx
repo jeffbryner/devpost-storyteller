@@ -3,8 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 
 interface StoryboardStep {
-    id?: string;
-    title?: string;
+    step_title?: string;
     description?: string;
     image_prompt?: string;
 }
@@ -147,7 +146,7 @@ export const StoryboardView: React.FC = () => {
                         borderRadius: '6px',
                         border: '1px solid #eee',
                     }}>
-                        <strong>{step.title || `Step ${idx + 1}`}</strong>
+                        <strong>{step.step_title || `Step ${idx + 1}`}</strong>
                         {step.description && (
                             <p style={{ margin: '5px 0 0 0', color: '#555' }}>{step.description}</p>
                         )}

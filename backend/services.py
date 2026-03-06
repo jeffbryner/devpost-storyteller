@@ -57,7 +57,7 @@ def generate_storyboard_image(steps: list, theme: str):
         # Build panel descriptions
         panel_descriptions = []
         for idx, step in enumerate(steps):
-            title = step.get("title", f"Step {idx + 1}")
+            title = step.get("step_title", f"Step {idx + 1}")
             description = step.get("description", "")
             image_prompt = step.get("image_prompt", "")
             panel_descriptions.append(

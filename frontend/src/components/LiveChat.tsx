@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { WS_BASE_URL } from '../config';
 
 export interface Step {
-    title: string;
+    step_title: string;
     description: string;
     image_prompt?: string;
 }
@@ -212,11 +212,11 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     </button>
                     <button onClick={() => {
                         const debugSteps: Step[] = [
-                            { title: "Arriving at the Restaurant", description: "We will get to Olive Garden and find our table. It might be loud, but we know where we are going.", image_prompt: "Child arriving at a busy Olive Garden restaurant with a parent, looking for a table." },
-                            { title: "Getting Ready to Order", description: "We will look at the menu we chose earlier. We can use noise-reducing headphones if needed to help focus.", image_prompt: "Child sitting at a restaurant table with a menu, possibly wearing noise-reducing headphones." },
-                            { title: "Ordering Calmly", description: "When the server comes, we will tell them our order clearly. It is okay to point at the menu or take a moment.", image_prompt: "Child interacting with a friendly server, pointing at their choice on the menu." },
-                            { title: "Waiting for Food", description: "While we wait, we can do something calm like draw or play a quiet game on a phone.", image_prompt: "Child patiently waiting at the table with a drawing pad or a small toy." },
-                            { title: "Enjoying the Meal", description: "Our food arrives! We will eat and enjoy the meal at the restaurant.", image_prompt: "Child happily eating pasta at the Olive Garden table." },
+                            { step_title: "Arriving at the Restaurant", description: "We will get to Olive Garden and find our table. It might be loud, but we know where we are going.", image_prompt: "Child arriving at a busy Olive Garden restaurant with a parent, looking for a table." },
+                            { step_title: "Getting Ready to Order", description: "We will look at the menu we chose earlier. We can use noise-reducing headphones if needed to help focus.", image_prompt: "Child sitting at a restaurant table with a menu, possibly wearing noise-reducing headphones." },
+                            { step_title: "Ordering Calmly", description: "When the server comes, we will tell them our order clearly. It is okay to point at the menu or take a moment.", image_prompt: "Child interacting with a friendly server, pointing at their choice on the menu." },
+                            { step_title: "Waiting for Food", description: "While we wait, we can do something calm like draw or play a quiet game on a phone.", image_prompt: "Child patiently waiting at the table with a drawing pad or a small toy." },
+                            { step_title: "Enjoying the Meal", description: "Our food arrives! We will eat and enjoy the meal at the restaurant.", image_prompt: "Child happily eating pasta at the Olive Garden table." },
                         ];
                         if (onStepsReceived) {
                             onStepsReceived(debugSteps);
