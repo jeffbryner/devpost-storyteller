@@ -18,6 +18,8 @@ locals {
   cloudbuild_sa   = "serviceAccount:${module.gcp_project_setup.cloudbuild_sa.email}"
   gar_repo_name   = "prj-containers" #container artifact registry repository
   art_bucket_name = format("bkt-%s-%s", "artifacts", local.project_id)
+  # bucket where the storyboards are held {PROJECT_ID}.firebasestorage.app
+  storyboard_bucket_name = format("%s.firebasestorage.app", local.project_id)
   # generate a hash of the source files to use as image tag
   # this ensures new image is built only when source changes
   # and the cloud run service is updated accordingly
@@ -247,7 +249,7 @@ resource "google_project_iam_member" "ai_access" {
 
 # allow the service account to create storage objects in the bucket
 resource "google_storage_bucket_iam_member" "cloudrun_service_storage_access" {
-  bucket = google_storage_bucket.cloudbuild_artifacts.name
+  bucket = local.storyboard_bucket_name
   role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
