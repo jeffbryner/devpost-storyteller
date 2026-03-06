@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
-# TODO: move models to a central file
 class StoryboardStep(BaseModel):
     id: Optional[int] = None
     title: str = ""
