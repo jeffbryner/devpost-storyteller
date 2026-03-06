@@ -50,7 +50,13 @@ async def websocket_ideate(websocket: WebSocket):
         """Call this function when you have gathered enough details from the user to generate the storyboard. Pass the generated steps as arguments.
 
         Args:
-            steps: A list of objects, each must contain a 'title', 'description', and 'image_prompt'.
+            steps: A list of StoryboardStep objects, each must contain a 'title', 'description', and 'image_prompt'.
+            The class definition is:
+            class StoryboardStep(BaseModel):
+                id: Optional[int] = None
+                title: str = ""
+                description: str = ""
+                image_prompt: str = ""
 
         """
         json_str = json.dumps({"steps": steps})
