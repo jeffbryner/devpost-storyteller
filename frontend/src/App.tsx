@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { LiveChat, type Step } from './components/LiveChat';
 import { StoryboardView } from './components/StoryboardView';
+import { API_BASE_URL } from './config';
 import './App.css';
 
 const Home: React.FC = () => {
@@ -31,7 +32,7 @@ const Home: React.FC = () => {
     );
 
     try {
-      const response = await fetch('http://localhost:8000/api/storyboard', {
+      const response = await fetch(`${API_BASE_URL}/api/storyboard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

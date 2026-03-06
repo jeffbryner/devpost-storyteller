@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 interface StoryboardStep {
     id?: string;
@@ -30,7 +31,7 @@ export const StoryboardView: React.FC = () => {
             }
 
             try {
-                const response = await fetch(`http://localhost:8000/api/storyboard/${id}`);
+                const response = await fetch(`${API_BASE_URL}/api/storyboard/${id}`);
                 if (!response.ok) {
                     if (response.status === 404) {
                         setError('Storyboard not found.');

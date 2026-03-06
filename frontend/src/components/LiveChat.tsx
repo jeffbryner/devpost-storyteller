@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { WS_BASE_URL } from '../config';
 
 export interface Step {
     title: string;
@@ -25,7 +26,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
         try {
             nextPlayTimeRef.current = 0; // Reset play time on new connection
             // Connect to WebSocket
-            const ws = new WebSocket('ws://localhost:8000/ws/ideate');
+            const ws = new WebSocket(`${WS_BASE_URL}/ws/ideate`);
             ws.binaryType = 'arraybuffer'; // Process binary data directly
             wsRef.current = ws;
 
