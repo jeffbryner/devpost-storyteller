@@ -176,6 +176,7 @@ resource "google_cloud_run_service" "backend" {
         image = terraform_data.backend_build.output
 
       }
+      timeout_seconds = 300
     }
   }
 
@@ -200,14 +201,6 @@ resource "google_cloud_run_service_iam_policy" "noauth" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
-
-# allow the  service account to access AI
-resource "google_project_iam_member" "ai_access" {
-  provider = google-beta
-  project  = local.project_id
-  role     = "roles/aiplatform.user"
-  member   = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
-}
 
 
 # front end cloud run service.
@@ -240,4 +233,21 @@ resource "google_cloud_run_service_iam_policy" "noauth_frontend" {
   service  = google_cloud_run_service.frontend.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+# permissions
+
+# allow the  service account to access AI
+resource "google_project_iam_member" "ai_access" {
+  provider = google-beta
+  project  = local.project_id
+  role     = "roles/aiplatform.user"
+  member   = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
+}
+
+# allow the service account to create storage objects in the bucket
+resource "google_storage_bucket_iam_member" "cloudrun_service_storage_access" {
+  bucket = google_storage_bucket.cloudbuild_artifacts.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
