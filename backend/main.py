@@ -6,18 +6,9 @@ from google import genai
 from google.genai import types
 from storyboard import router as storyboard_router
 from services import MODEL, LIVE_MODEL, ai_client, logger, get_current_time_and_date
-from pydantic import BaseModel
-from typing import Optional, List
+from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-
-
-# TODO: move models to a central file
-class StoryboardStep(BaseModel):
-    id: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    image_prompt: Optional[str] = None
 
 
 app = FastAPI(title="Autism Event Storyboard API")
@@ -59,10 +50,11 @@ async def websocket_ideate(websocket: WebSocket):
         """Call this function when you have gathered enough details from the user to generate the storyboard. Pass the generated steps as arguments.
 
         Args:
-            steps: A list of objects, each containing a 'title', 'description', and 'image_prompt'.
+            steps: A list of objects, each must contain a 'title', 'description', and 'image_prompt'.
 
         """
         json_str = json.dumps({"steps": steps})
+        # logger doesn't work in this function since it's called synchronously by the Gemini response generator
         logger.info(f"DEBUG: generate_storyboard called with {len(steps)} steps")
         # # Schedule the websocket send (doesn't work to do it directly in this function since it's called synchronously by the Gemini response generator, but we need to send the data asynchronously)
         # loop = asyncio.get_event_loop()
@@ -176,6 +168,8 @@ async def websocket_ideate(websocket: WebSocket):
                                         normalized_steps = []
                                         for s in raw_steps:
                                             if isinstance(s, str):
+                                                if s.endswith(","):
+                                                    s = s[:-1]
                                                 normalized_steps.append(json.loads(s))
                                             elif isinstance(s, dict):
                                                 normalized_steps.append(s)

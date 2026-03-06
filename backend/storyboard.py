@@ -1,28 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
+from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 import uuid
 import datetime
 from services import ai_client, db, bucket, generate_storyboard_image, logger
 
 router = APIRouter()
-
-
-class StoryboardStep(BaseModel):
-    id: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    image_prompt: Optional[str] = None
-
-
-class StoryboardRequest(BaseModel):
-    steps: List[StoryboardStep]
-    theme: str
-
-
-class StoryboardResponse(BaseModel):
-    id: str
-    data: dict
 
 
 @router.post("/api/storyboard", response_model=StoryboardResponse)
