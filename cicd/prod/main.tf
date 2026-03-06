@@ -21,9 +21,9 @@ locals {
   # generate a hash of the source files to use as image tag
   # this ensures new image is built only when source changes
   # and the cloud run service is updated accordingly
-  frontend_hash       = sha1(join("", [for f in fileset(path.root, "../../src/container/**") : filesha1(f)]))
+  frontend_hash       = sha1(join("", [for f in fileset(path.root, "../../frontend/**") : filesha1(f)]))
   frontend_image_name = "${local.location}-docker.pkg.dev/${local.project_id}/${local.gar_repo_name}/frontend:${local.frontend_hash}"
-  backend_hash        = sha1(join("", [for f in fileset(path.root, "../../src/backend/**") : filesha1(f)]))
+  backend_hash        = sha1(join("", [for f in fileset(path.root, "../../ackend/**") : filesha1(f)]))
   backend_image_name  = "${local.location}-docker.pkg.dev/${local.project_id}/${local.gar_repo_name}/backend:${local.backend_hash}"
 }
 
