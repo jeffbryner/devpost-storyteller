@@ -8,7 +8,15 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Cache static assets
+    # config.js is generated at container startup with runtime env vars.
+    # It must never be cached so the browser always gets the latest values.
+    location = /config.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        expires -1;
+    }
+
+    # Cache static assets (Vite adds content hashes to filenames,
+    # so long-term caching is safe for everything except config.js).
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";

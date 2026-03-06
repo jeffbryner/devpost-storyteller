@@ -9,6 +9,17 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      workbox: {
+        // Exclude config.js from precaching — it's generated at runtime
+        // and must always be fetched fresh from the server.
+        navigateFallbackDenylist: [/^\/config\.js$/],
+        runtimeCaching: [
+          {
+            urlPattern: /\/config\.js$/,
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
       manifest: {
         name: 'Autism Event Storyboard',
         short_name: 'Storyboard',
