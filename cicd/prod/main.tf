@@ -76,7 +76,29 @@ resource "terraform_data" "backend_build" {
       EOT
   }
 }
+# Ideally triggers are deployed using terraform.
+# Currently blocked by: │ Error: Error creating Trigger: googleapi: Error 400: Request contains an invalid argument.
+# Create manually for now.
+# resource "google_cloudbuild_trigger" "deploy_trigger" {
+#   name        = "deploy-branch"
+#   description = "Deploys application on push to branch"
+#   location    = var.default_region
+#   project     = local.project_id
 
+#   # Link the specific Service Account here
+#   service_account = local.cloudbuild_sa
+
+#   # Connect to your GitHub Repo (github or developer_connect stanza)
+#   # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloudbuild_trigger#example-usage---cloudbuild-trigger-developer-connect-push
+#   github {
+#     owner = var.github_org
+#     name  = var.github_repo
+#     push {
+#       branch = "^main$"
+#     }
+#   }
+#   filename = "cloudbuild.yaml"
+# }
 
 # create a bucket for cloudbuild artifacts
 resource "google_storage_bucket" "cloudbuild_artifacts" {
