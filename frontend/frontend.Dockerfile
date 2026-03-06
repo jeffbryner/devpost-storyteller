@@ -27,9 +27,12 @@ COPY config.js.template /usr/share/nginx/html/config.js.template
 # from /etc/nginx/templates/*.template into /etc/nginx/conf.d/ at startup)
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Copy entrypoint script that generates config.js then starts nginx
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Place our config.js generator in /docker-entrypoint.d/ so nginx's
+# built-in entrypoint automatically runs it before starting.
+# Use a numeric prefix (05-) to ensure it runs before the nginx template
+# processing step (20-envsubst-on-templates.sh).
+COPY entrypoint.sh /docker-entrypoint.d/05-generate-config-js.sh
+RUN chmod +x /docker-entrypoint.d/05-generate-config-js.sh
 
 # Cloud Run sets PORT env var (default 8080)
 ENV PORT=8080
@@ -38,4 +41,5 @@ ENV API_BASE_URL=""
 
 EXPOSE 8080
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Use nginx's default entrypoint and CMD — no custom ENTRYPOINT needed
+CMD ["nginx", "-g", "daemon off;"]
