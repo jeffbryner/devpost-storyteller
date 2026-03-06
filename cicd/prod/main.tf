@@ -253,3 +253,10 @@ resource "google_storage_bucket_iam_member" "cloudrun_service_storage_access" {
   role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
+
+#grant firebase data store user role to the service account for storing storyboards in firebase storage
+resource "google_project_iam_member" "firebase_datastore_access" {
+  project = local.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
+}
