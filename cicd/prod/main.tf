@@ -25,7 +25,7 @@ locals {
   # and the cloud run service is updated accordingly
   frontend_hash       = sha1(join("", [for f in fileset(path.root, "../../frontend/**") : filesha1(f)]))
   frontend_image_name = "${local.location}-docker.pkg.dev/${local.project_id}/${local.gar_repo_name}/frontend:${local.frontend_hash}"
-  backend_hash        = sha1(join("", [for f in fileset(path.root, "../../ackend/**") : filesha1(f)]))
+  backend_hash        = sha1(join("", [for f in fileset(path.root, "../../backend/**") : filesha1(f)]))
   backend_image_name  = "${local.location}-docker.pkg.dev/${local.project_id}/${local.gar_repo_name}/backend:${local.backend_hash}"
 }
 
