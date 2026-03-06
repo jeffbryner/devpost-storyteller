@@ -6,5 +6,8 @@ set -e
 export API_BASE_URL="${API_BASE_URL:-}"
 envsubst < /usr/share/nginx/html/config.js.template > /usr/share/nginx/html/config.js
 
-# Start nginx
-exec nginx -g 'daemon off;'
+echo "Generated config.js with API_BASE_URL=${API_BASE_URL}"
+
+# Delegate to the official nginx entrypoint which handles
+# /etc/nginx/templates/*.template processing (e.g. PORT substitution)
+exec /docker-entrypoint.sh nginx -g 'daemon off;'
