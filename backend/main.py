@@ -44,7 +44,7 @@ async def websocket_ideate(websocket: WebSocket):
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
         "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects."
         "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a step_title, description, and image_prompt. "
-        "When asked what day it is, use the `get_current_time_and_date` function to get the current date and time. "
+        "if needed you can use the `get_current_time_and_date` function to get the current date and time. "
     )
 
     def generate_storyboard(steps: list[StoryboardStep]) -> str:
