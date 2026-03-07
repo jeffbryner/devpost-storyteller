@@ -15,11 +15,47 @@ interface StoryboardData {
     created_at: string;
 }
 
+type CompletionStyle = 'dim' | 'crossout' | 'watermark';
+
+const STORAGE_KEY_PREFIX = 'storyboard-progress-';
+const STYLE_KEY_PREFIX = 'storyboard-style-';
+
 export const StoryboardView: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [storyboard, setStoryboard] = useState<StoryboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+    const [completionStyle, setCompletionStyle] = useState<CompletionStyle>('watermark');
+
+    // Load persisted progress and style from localStorage once id is available
+    useEffect(() => {
+        if (!id) return;
+        try {
+            const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${id}`);
+            if (saved) {
+                setCompletedSteps(new Set(JSON.parse(saved) as number[]));
+            }
+            const savedStyle = localStorage.getItem(`${STYLE_KEY_PREFIX}${id}`);
+            if (savedStyle) {
+                setCompletionStyle(savedStyle as CompletionStyle);
+            }
+        } catch {
+            // ignore parse errors
+        }
+    }, [id]);
+
+    // Persist completedSteps whenever they change
+    useEffect(() => {
+        if (!id) return;
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}${id}`, JSON.stringify([...completedSteps]));
+    }, [completedSteps, id]);
+
+    // Persist completionStyle whenever it changes
+    useEffect(() => {
+        if (!id) return;
+        localStorage.setItem(`${STYLE_KEY_PREFIX}${id}`, completionStyle);
+    }, [completionStyle, id]);
 
     useEffect(() => {
         const fetchStoryboard = async () => {
@@ -51,6 +87,22 @@ export const StoryboardView: React.FC = () => {
 
         fetchStoryboard();
     }, [id]);
+
+    const toggleStep = (idx: number) => {
+        setCompletedSteps(prev => {
+            const next = new Set(prev);
+            if (next.has(idx)) {
+                next.delete(idx);
+            } else {
+                next.add(idx);
+            }
+            return next;
+        });
+    };
+
+    const resetAll = () => {
+        setCompletedSteps(new Set());
+    };
 
     if (loading) {
         return (
@@ -87,6 +139,9 @@ export const StoryboardView: React.FC = () => {
     if (!storyboard) {
         return null;
     }
+
+    const completedCount = completedSteps.size;
+    const totalSteps = storyboard.steps.length;
 
     return (
         <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
@@ -136,27 +191,229 @@ export const StoryboardView: React.FC = () => {
                 </div>
             )}
 
-            <h3>Steps</h3>
-            <ol style={{ textAlign: 'left', paddingLeft: '20px' }}>
-                {storyboard.steps.map((step, idx) => (
-                    <li key={idx} style={{
-                        marginBottom: '15px',
-                        padding: '10px',
-                        background: '#f9f9f9',
-                        borderRadius: '6px',
-                        border: '1px solid #eee',
+            {/* Steps header row with progress, style selector, and reset */}
+            <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginBottom: '12px',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h3 style={{ margin: 0 }}>Steps</h3>
+                    <span style={{
+                        fontSize: '0.85em',
+                        color: completedCount === totalSteps && totalSteps > 0 ? '#4CAF50' : '#888',
+                        fontWeight: completedCount === totalSteps && totalSteps > 0 ? 'bold' : 'normal',
                     }}>
-                        <strong>{step.step_title || `Step ${idx + 1}`}</strong>
-                        {step.description && (
-                            <p style={{ margin: '5px 0 0 0', color: '#555' }}>{step.description}</p>
-                        )}
-                    </li>
-                ))}
+                        {completedCount}/{totalSteps} done
+                    </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    {/* Style selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9em' }}>
+                        <span style={{ color: '#555', fontWeight: 500 }}>Mark style:</span>
+                        {(['dim', 'crossout', 'watermark'] as CompletionStyle[]).map(style => (
+                            <label
+                                key={style}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    cursor: 'pointer',
+                                    color: completionStyle === style ? '#333' : '#777',
+                                    fontWeight: completionStyle === style ? 600 : 400,
+                                }}
+                            >
+                                <input
+                                    type="radio"
+                                    name="completionStyle"
+                                    value={style}
+                                    checked={completionStyle === style}
+                                    onChange={() => setCompletionStyle(style)}
+                                    style={{ cursor: 'pointer' }}
+                                />
+                                {style === 'dim' ? 'Dim' : style === 'crossout' ? 'Cross Out' : 'Watermark'}
+                            </label>
+                        ))}
+                    </div>
+
+                    {/* Reset All button */}
+                    {completedCount > 0 && (
+                        <button
+                            onClick={resetAll}
+                            title="Reset all steps to not done"
+                            style={{
+                                padding: '5px 12px',
+                                fontSize: '0.85em',
+                                background: '#fff',
+                                color: '#c0392b',
+                                border: '1px solid #c0392b',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            ↺ Reset All
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <ol style={{ textAlign: 'left', paddingLeft: '20px' }}>
+                {storyboard.steps.map((step, idx) => {
+                    const done = completedSteps.has(idx);
+                    return (
+                        <li key={idx} style={{ marginBottom: '15px', listStyle: 'none', counterIncrement: 'none' }}>
+                            <StepCard
+                                step={step}
+                                idx={idx}
+                                done={done}
+                                style={completionStyle}
+                                onToggle={() => toggleStep(idx)}
+                            />
+                        </li>
+                    );
+                })}
             </ol>
 
             <p style={{ color: '#999', fontSize: '0.85em', marginTop: '20px' }}>
                 Created: {new Date(storyboard.created_at).toLocaleString()}
             </p>
+        </div>
+    );
+};
+
+interface StepCardProps {
+    step: StoryboardStep;
+    idx: number;
+    done: boolean;
+    style: CompletionStyle;
+    onToggle: () => void;
+}
+
+const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle }) => {
+    // Base card styles
+    const cardStyle: React.CSSProperties = {
+        position: 'relative',
+        marginBottom: '0',
+        padding: '10px 10px 10px 14px',
+        background: done && style === 'dim' ? '#e0e0e0' : '#f9f9f9',
+        borderRadius: '6px',
+        border: `1px solid ${done && style === 'dim' ? '#ccc' : '#eee'}`,
+        opacity: done && style === 'dim' ? 0.45 : 1,
+        overflow: 'hidden',
+        transition: 'opacity 0.2s ease, background 0.2s ease',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '10px',
+    };
+
+    const titleStyle: React.CSSProperties = {
+        textDecoration: done && style === 'crossout' ? 'line-through' : 'none',
+        color: done && style === 'crossout' ? '#aaa' : 'inherit',
+    };
+
+    const descStyle: React.CSSProperties = {
+        margin: '5px 0 0 0',
+        color: done && style === 'crossout' ? '#bbb' : '#555',
+        textDecoration: done && style === 'crossout' ? 'line-through' : 'none',
+    };
+
+    return (
+        <div style={cardStyle}>
+            {/* Step number + content */}
+            <div style={{ flex: 1 }}>
+                <strong style={titleStyle}>{idx + 1}. {step.step_title || `Step ${idx + 1}`}</strong>
+                {step.description && (
+                    <p style={descStyle}>{step.description}</p>
+                )}
+            </div>
+
+            {/* Toggle button */}
+            <button
+                onClick={onToggle}
+                title={done ? 'Mark as not done' : 'Mark as done'}
+                style={{
+                    flexShrink: 0,
+                    alignSelf: 'center',
+                    padding: '4px 10px',
+                    fontSize: '0.82em',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    border: done ? '1px solid #aaa' : '1px solid #4CAF50',
+                    background: done ? '#f0f0f0' : '#4CAF50',
+                    color: done ? '#666' : '#fff',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                {done ? '↩ Undo' : '✓ Done'}
+            </button>
+
+            {/* Watermark overlay */}
+            {done && style === 'watermark' && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                }}>
+                    <span style={{
+                        fontSize: '1.4em',
+                        fontWeight: 700,
+                        color: 'rgba(76, 175, 80, 0.35)',
+                        border: '2px solid rgba(76, 175, 80, 0.35)',
+                        borderRadius: '4px',
+                        padding: '2px 10px',
+                        letterSpacing: '0.1em',
+                        transform: 'rotate(-8deg)',
+                        userSelect: 'none',
+                        textTransform: 'uppercase',
+                    }}>
+                        ✓ Done
+                    </span>
+                </div>
+            )}
+
+            {/* Cross-out diagonal line overlay */}
+            {done && style === 'crossout' && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                }}>
+                    <svg
+                        width="100%"
+                        height="100%"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                        preserveAspectRatio="none"
+                    >
+                        <line
+                            x1="0" y1="0" x2="100%" y2="100%"
+                            stroke="rgba(180,0,0,0.25)"
+                            strokeWidth="2"
+                        />
+                        <line
+                            x1="100%" y1="0" x2="0" y2="100%"
+                            stroke="rgba(180,0,0,0.25)"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+            )}
         </div>
     );
 };
