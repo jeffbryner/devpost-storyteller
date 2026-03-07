@@ -4,7 +4,7 @@ import { WS_BASE_URL } from '../config';
 export interface Step {
     step_title: string;
     description: string;
-    image_prompt?: string;
+    image_prompt: string;
 }
 
 interface LiveChatProps {
