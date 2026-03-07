@@ -51,6 +51,15 @@ def get_current_time_and_date() -> str:
     return datetime.now().strftime("%A, %B %d, %Y")
 
 
+def get_grid_dimensions(num_panels: int) -> tuple[int, int]:
+    """Return (cols, rows) for a consistent 2-column grid layout."""
+    import math
+
+    cols = 2
+    rows = math.ceil(num_panels / cols)
+    return cols, rows
+
+
 def generate_storyboard_image(steps: list, theme: str):
     """Generate a single storyboard image with all steps as panels in one API call."""
     try:
@@ -66,11 +75,16 @@ def generate_storyboard_image(steps: list, theme: str):
 
         panels_text = "\n".join(panel_descriptions)
         num_panels = len(steps)
+        grid_cols, grid_rows = get_grid_dimensions(num_panels)
 
         prompt = (
             f"A child-friendly, safe-for-all-ages {theme} style storyboard "
-            f"illustration divided into {num_panels} sequential panels telling "
-            f"a positive visual story:\n\n{panels_text}"
+            f"illustration with exactly {num_panels} sequential panels arranged "
+            f"in a strict {grid_cols}-column, {grid_rows}-row grid. "
+            f"Panels are numbered left-to-right, top-to-bottom. "
+            f"Each panel is exactly the same size with a clear visible border between panels. "
+            f"Do not add any extra panels or empty cells. "
+            f"The visual story:\n\n{panels_text}"
         )
 
         logger.info(f"Generating storyboard image with prompt: {prompt}")

@@ -13,6 +13,8 @@ interface StoryboardData {
     storyboard_image_url: string | null;
     steps: StoryboardStep[];
     created_at: string;
+    grid_cols?: number;
+    grid_rows?: number;
 }
 
 type CompletionStyle = 'dim' | 'crossout' | 'watermark';
@@ -143,6 +145,10 @@ export const StoryboardView: React.FC = () => {
     const completedCount = completedSteps.size;
     const totalSteps = storyboard.steps.length;
 
+    // Grid layout: use stored values or fall back to 2-column default
+    const gridCols = storyboard.grid_cols ?? 2;
+    const gridRows = storyboard.grid_rows ?? Math.ceil(totalSteps / gridCols);
+
     return (
         <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -171,12 +177,39 @@ export const StoryboardView: React.FC = () => {
                     border: '1px solid #ddd',
                     borderRadius: '8px',
                     overflow: 'hidden',
+                    position: 'relative',
                 }}>
                     <img
                         src={storyboard.storyboard_image_url}
                         alt="Storyboard"
                         style={{ width: '100%', display: 'block' }}
                     />
+                    {/* Panel overlay grid — sits on top of the image without modifying it */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                        gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                        pointerEvents: 'none',
+                    }}>
+                        {Array.from({ length: gridCols * gridRows }).map((_, cellIdx) => {
+                            const isDone = completedSteps.has(cellIdx);
+                            const isValidPanel = cellIdx < totalSteps;
+                            return (
+                                <PanelOverlayCell
+                                    key={cellIdx}
+                                    idx={cellIdx}
+                                    done={isDone && isValidPanel}
+                                    style={completionStyle}
+                                    isValidPanel={isValidPanel}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             ) : (
                 <div style={{
@@ -265,7 +298,7 @@ export const StoryboardView: React.FC = () => {
                 {storyboard.steps.map((step, idx) => {
                     const done = completedSteps.has(idx);
                     return (
-                        <li key={idx} style={{ marginBottom: '15px', listStyle: 'none', counterIncrement: 'none' }}>
+                        <li key={idx} style={{ marginBottom: '15px', listStyle: 'none' }}>
                             <StepCard
                                 step={step}
                                 idx={idx}
@@ -285,6 +318,87 @@ export const StoryboardView: React.FC = () => {
     );
 };
 
+// ─── Panel overlay cell rendered on top of the image ────────────────────────
+
+interface PanelOverlayCellProps {
+    idx: number;
+    done: boolean;
+    style: CompletionStyle;
+    isValidPanel: boolean;
+}
+
+const PanelOverlayCell: React.FC<PanelOverlayCellProps> = ({ done, style, isValidPanel }) => {
+    if (!done || !isValidPanel) {
+        return <div style={{ position: 'relative' }} />;
+    }
+
+    return (
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
+            {style === 'dim' && (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.55)',
+                }} />
+            )}
+
+            {style === 'crossout' && (
+                <>
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.18)',
+                    }} />
+                    <svg
+                        width="100%"
+                        height="100%"
+                        style={{ position: 'absolute', inset: 0 }}
+                        preserveAspectRatio="none"
+                    >
+                        <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(200,0,0,0.6)" strokeWidth="3" />
+                        <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(200,0,0,0.6)" strokeWidth="3" />
+                    </svg>
+                </>
+            )}
+
+            {style === 'watermark' && (
+                <>
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.15)',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <span style={{
+                            fontSize: 'clamp(0.8rem, 3vw, 1.6rem)',
+                            fontWeight: 800,
+                            color: 'rgba(255,255,255,0.85)',
+                            border: '3px solid rgba(255,255,255,0.75)',
+                            borderRadius: '6px',
+                            padding: '2px 10px',
+                            letterSpacing: '0.12em',
+                            transform: 'rotate(-10deg)',
+                            userSelect: 'none',
+                            textTransform: 'uppercase',
+                            textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        }}>
+                            ✓ Done
+                        </span>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+// ─── Step card in the list below the image ──────────────────────────────────
+
 interface StepCardProps {
     step: StoryboardStep;
     idx: number;
@@ -294,10 +408,8 @@ interface StepCardProps {
 }
 
 const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle }) => {
-    // Base card styles
     const cardStyle: React.CSSProperties = {
         position: 'relative',
-        marginBottom: '0',
         padding: '10px 10px 10px 14px',
         background: done && style === 'dim' ? '#e0e0e0' : '#f9f9f9',
         borderRadius: '6px',
@@ -324,7 +436,6 @@ const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle })
 
     return (
         <div style={cardStyle}>
-            {/* Step number + content */}
             <div style={{ flex: 1 }}>
                 <strong style={titleStyle}>{idx + 1}. {step.step_title || `Step ${idx + 1}`}</strong>
                 {step.description && (
@@ -332,7 +443,6 @@ const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle })
                 )}
             </div>
 
-            {/* Toggle button */}
             <button
                 onClick={onToggle}
                 title={done ? 'Mark as not done' : 'Mark as done'}
@@ -353,14 +463,11 @@ const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle })
                 {done ? '↩ Undo' : '✓ Done'}
             </button>
 
-            {/* Watermark overlay */}
+            {/* Watermark overlay on step card */}
             {done && style === 'watermark' && (
                 <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    top: 0, left: 0, right: 0, bottom: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -384,14 +491,11 @@ const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle })
                 </div>
             )}
 
-            {/* Cross-out diagonal line overlay */}
+            {/* Cross-out diagonal overlay on step card */}
             {done && style === 'crossout' && (
                 <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    top: 0, left: 0, right: 0, bottom: 0,
                     pointerEvents: 'none',
                     zIndex: 1,
                 }}>
@@ -401,16 +505,8 @@ const StepCard: React.FC<StepCardProps> = ({ step, idx, done, style, onToggle })
                         style={{ position: 'absolute', top: 0, left: 0 }}
                         preserveAspectRatio="none"
                     >
-                        <line
-                            x1="0" y1="0" x2="100%" y2="100%"
-                            stroke="rgba(180,0,0,0.25)"
-                            strokeWidth="2"
-                        />
-                        <line
-                            x1="100%" y1="0" x2="0" y2="100%"
-                            stroke="rgba(180,0,0,0.25)"
-                            strokeWidth="2"
-                        />
+                        <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(180,0,0,0.25)" strokeWidth="2" />
+                        <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(180,0,0,0.25)" strokeWidth="2" />
                     </svg>
                 </div>
             )}
