@@ -88,6 +88,7 @@ const Home: React.FC = () => {
               <option value="Black and White Cartoon">Black and White Cartoon</option>
               <option value="Superhero">Superhero</option>
               <option value="Pencil Sketch">Pencil Sketch</option>
+              <option value="Photorealistic">Photorealistic</option>
             </select>
           </div>
 
