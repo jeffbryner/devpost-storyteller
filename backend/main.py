@@ -45,7 +45,7 @@ async def websocket_ideate(websocket: WebSocket):
         "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects."
         "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a step_title, description, and image_prompt. "
         "Ensure the image_prompt includes details about words to avoid, whether to show people, etc"
-        "The steps will be put into a storyboard on a 3 column grid layout. Always break the steps down into steps that would look good in this grid."
+        "The steps will be put into a storyboard on a 3x2 column grid layout. Always break the steps down into 6 steps that would look good in this grid."
     )
 
     def generate_storyboard(steps: list[StoryboardStep]) -> str:
