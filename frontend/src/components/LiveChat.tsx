@@ -176,7 +176,6 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
         source.start(nextPlayTimeRef.current);
         nextPlayTimeRef.current += audioBuffer.duration;
     };
-
     useEffect(() => {
         return () => {
             disconnect();
@@ -184,25 +183,26 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
     }, []);
 
     return (
-        <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h2>Real-Time Conversational Ideation</h2>
-
-            <div style={{ marginBottom: '20px' }}>
-                {!isConnected ? (
-                    <button onClick={connect}>Connect to Assistant</button>
-                ) : (
-                    <button onClick={disconnect}>Disconnect</button>
-                )}
+        <div className="chat-container">
+            <div className="chat-header">
+                <h3>Real-Time Conversational Ideation</h3>
+                <div>
+                    {!isConnected ? (
+                        <button onClick={connect}>Connect to Assistant</button>
+                    ) : (
+                        <button className="danger" onClick={disconnect}>Disconnect</button>
+                    )}
+                </div>
             </div>
 
             {isConnected && (
-                <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+                <div className="chat-controls">
                     {!isRecording ? (
-                        <button onClick={startRecording}>Start Speaking</button>
+                        <button className="success" onClick={startRecording}>🎙️ Start Speaking</button>
                     ) : (
-                        <button onClick={stopRecording}>Stop Speaking</button>
+                        <button className="danger pulsate" onClick={stopRecording}>⏹️ Stop Speaking</button>
                     )}
-                    <button onClick={() => {
+                    <button className="secondary" onClick={() => {
                         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                             wsRef.current.send("Please call the generate_storyboard function now to draft the storyboard steps.");
                             setMessages((prev) => [...prev, 'You: (Requested to draft storyboard steps)']);
@@ -210,7 +210,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     }}>
                         Draft Steps Now
                     </button>
-                    <button onClick={() => {
+                    <button className="secondary" onClick={() => {
                         const debugSteps: Step[] = [
                             { step_title: "Arriving at the Restaurant", description: "We will get to Olive Garden and find our table. It might be loud, but we know where we are going.", image_prompt: "Child arriving at a busy Olive Garden restaurant with a parent, looking for a table." },
                             { step_title: "Getting Ready to Order", description: "We will look at the menu we chose earlier. We can use noise-reducing headphones if needed to help focus.", image_prompt: "Child sitting at a restaurant table with a menu, possibly wearing noise-reducing headphones." },
@@ -228,12 +228,39 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     </button>
                 </div>
             )}
-            <div style={{ maxHeight: '300px', overflowY: 'auto', background: '#f9f9f9', padding: '10px', color: '#333' }}>
-                {messages.map((msg, idx) => (
-                    <div key={idx} style={{ marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>
-                        {msg}
+
+            <div className="chat-messages">
+                {messages.length === 0 ? (
+                    <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
+                        Connect to the assistant to start ideating...
                     </div>
-                ))}
+                ) : (
+                    messages.map((msg, idx) => {
+                        const isYou = msg.startsWith('You:');
+                        const isGemini = msg.startsWith('Gemini:');
+                        const isDebug = msg.startsWith('Debug:');
+                        const isConnectedMsg = msg === 'Connected to Gemini Live.' || msg === 'Disconnected.';
+
+                        let messageClass = 'chat-message system';
+                        let displayMsg = msg;
+
+                        if (isYou) {
+                            messageClass = 'chat-message user';
+                            displayMsg = msg.replace('You: ', '');
+                        } else if (isGemini) {
+                            messageClass = 'chat-message gemini';
+                            displayMsg = msg.replace('Gemini: ', '');
+                        } else if (isDebug) {
+                            messageClass = 'chat-message system';
+                        }
+
+                        return (
+                            <div key={idx} className={messageClass}>
+                                {displayMsg}
+                            </div>
+                        );
+                    })
+                )}
             </div>
         </div>
     );

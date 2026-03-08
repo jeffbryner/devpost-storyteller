@@ -1,11 +1,12 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: #1e293b;
+  background-color: #f8fafc;
+  /* light slate for a calm vibe */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +14,94 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body {
   margin: 0;
   display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #0f172a;
+  margin-top: 0;
 }
 
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: none;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #3b82f6;
+  color: white;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+button:disabled {
+  background-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+button.danger {
+  background-color: #ef4444;
+}
+
+button.danger:hover {
+  background-color: #dc2626;
+}
+
+button.secondary {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+button.secondary:hover {
+  background-color: #e2e8f0;
+}
+
+button.success {
+  background-color: #10b981;
+}
+
+button.success:hover {
+  background-color: #059669;
+}
+
+input,
+select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5em 0.8em;
+  font-size: 1em;
+  font-family: inherit;
+  background-color: white;
+  color: #334155;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
