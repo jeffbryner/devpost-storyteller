@@ -144,8 +144,8 @@ async def websocket_ideate(websocket: WebSocket):
                 disabled=False,
                 start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
                 end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
-                prefix_padding_ms=150,
-                silence_duration_ms=400,
+                # prefix_padding_ms=150,
+                # silence_duration_ms=400,
             )
         ),
     )
