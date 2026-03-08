@@ -52,10 +52,10 @@ def get_current_time_and_date() -> str:
 
 
 def get_grid_dimensions(num_panels: int) -> tuple[int, int]:
-    """Return (cols, rows) for a consistent 2-column grid layout."""
+    """Return (cols, rows) for a consistent 3-column grid layout."""
     import math
 
-    cols = 2
+    cols = 3
     rows = math.ceil(num_panels / cols)
     return cols, rows
 

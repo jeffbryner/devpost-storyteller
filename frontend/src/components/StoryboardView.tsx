@@ -145,8 +145,8 @@ export const StoryboardView: React.FC = () => {
     const completedCount = completedSteps.size;
     const totalSteps = storyboard.steps.length;
 
-    // Grid layout: use stored values or fall back to 2-column default
-    const gridCols = storyboard.grid_cols ?? 2;
+    // Grid layout: use stored values or fall back to 3-column default
+    const gridCols = storyboard.grid_cols ?? 3;
     const gridRows = storyboard.grid_rows ?? Math.ceil(totalSteps / gridCols);
 
     return (

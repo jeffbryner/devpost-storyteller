@@ -43,9 +43,9 @@ async def websocket_ideate(websocket: WebSocket):
         "You are an assistant helping a parent storyboard an upcoming event for an autistic child. "
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
         "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects."
-        "The steps will be put into a storyboard on a grid layout, so if the user describes a sequence of events, try to break them down into an even number of distinct steps with clear titles and descriptions."
         "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a step_title, description, and image_prompt. "
-        "if needed you can use the `get_current_time_and_date` function to get the current date and time. "
+        "Ensure the image_prompt includes details about words to avoid, whether to show people, etc"
+        "The steps will be put into a storyboard on a 3 column grid layout. Always break the steps down into steps that would look good in this grid."
     )
 
     def generate_storyboard(steps: list[StoryboardStep]) -> str:
@@ -68,6 +68,16 @@ async def websocket_ideate(websocket: WebSocket):
         """
         required_fields = {"step_title", "description", "image_prompt"}
         errors = []
+
+        logger.info(
+            f"DEBUG: Validating steps layout. Expected 3x2 grid, got {len(steps)} steps."
+        )
+
+        if len(steps) != 6:
+            errors.append(
+                f"Exactly 6 steps are required for the 3x2 grid layout, but {len(steps)} step(s) were provided. "
+                f"Please adjust the number of steps to be exactly 6."
+            )
 
         for i, step in enumerate(steps):
             # Handle step as dict or Pydantic model
