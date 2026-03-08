@@ -2,7 +2,14 @@ from fastapi import APIRouter, HTTPException
 from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 import uuid
 import datetime
-from services import ai_client, db, bucket, generate_storyboard_image, logger
+from services import (
+    ai_client,
+    db,
+    bucket,
+    generate_storyboard_image,
+    get_grid_dimensions,
+    logger,
+)
 
 router = APIRouter()
 
@@ -47,11 +54,16 @@ async def create_storyboard(request: StoryboardRequest):
     except Exception as e:
         logger.error(f"Error generating or saving storyboard image: {e}")
 
+    # Compute consistent grid layout for overlay alignment
+    grid_cols, grid_rows = get_grid_dimensions(len(steps_as_dicts))
+
     storyboard_data = {
         "theme": request.theme,
         "storyboard_image_url": storyboard_image_url,
         "steps": steps_as_dicts,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "grid_cols": grid_cols,
+        "grid_rows": grid_rows,
     }
 
     # Save to Firestore
