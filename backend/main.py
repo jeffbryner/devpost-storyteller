@@ -9,7 +9,7 @@ from services import MODEL, LIVE_MODEL, ai_client, logger, get_current_time_and_
 from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-
+from google.genai.types import SpeechConfig, VoiceConfig, PrebuiltVoiceConfig
 
 app = FastAPI(title="Autism Event Storyboard API")
 
@@ -129,165 +129,208 @@ async def websocket_ideate(websocket: WebSocket):
 
     config = types.LiveConnectConfig(
         response_modalities=[types.Modality.AUDIO],
+        media_resolution=types.MediaResolution.MEDIA_RESOLUTION_LOW,
         system_instruction=system_instruction,
         tools=[generate_storyboard, get_current_time_and_date],
+        speech_config=SpeechConfig(
+            voice_config=VoiceConfig(
+                prebuilt_voice_config=PrebuiltVoiceConfig(
+                    voice_name="Gacrux",
+                )
+            ),
+        ),
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                disabled=False,
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
+            )
+        ),
     )
 
     try:
-        async with ai_client.aio.live.connect(
-            model=LIVE_MODEL, config=config
-        ) as session:
+        # Wrap the connection attempt in a timeout to prevent hanging on unresponsive API
+        # and improve edge-case handling.
+        async with asyncio.timeout(10.0) as timeout:
+            async with ai_client.aio.live.connect(
+                model=LIVE_MODEL, config=config
+            ) as session:
 
-            async def receive_from_client():
-                try:
-                    while True:
-                        # We expect JSON indicating start/stop, or raw bytes for audio
-                        message = await websocket.receive()
-                        if "bytes" in message:
-                            data = message["bytes"]
-                            await session.send(
-                                input={"data": data, "mime_type": "audio/pcm"},
-                                end_of_turn=False,
-                            )
-                        elif "text" in message:
-                            # Might be control messages or text input
-                            text_data = message["text"]
-                            logger.info(
-                                f"DEBUG: Received text from client: {text_data}"
-                            )
-                            await session.send(input=text_data, end_of_turn=True)
-                except WebSocketDisconnect:
-                    pass
-                except Exception as e:
-                    logger.error(f"Error receiving from frontend: {e}")
+                # Immediately prompt the model to greet the user upon successful connection
+                logger.info("Connection established, sending initial greeting prompt")
+                await session.send_client_content(
+                    turns=types.Content(role="user", parts=[types.Part(text="Hello!")])
+                )
 
-            async def receive_from_gemini():
-                try:
-                    while True:
-                        async for response in session.receive():
-                            server_content = response.server_content
-                            if server_content is not None:
-                                # --- ADDED LOGS FOR DEBUGGING BARGE-IN ---
-                                if getattr(server_content, "interrupted", False):
-                                    logger.info(
-                                        "DEBUG: Gemini response was INTERRUPTED by user audio (barge-in)"
-                                    )
-                                if getattr(server_content, "turn_complete", False):
-                                    logger.info(
-                                        f"DEBUG: Gemini response turn COMPLETE {server_content}"
-                                    )
-                                    # logger.info(
-                                    #     f"DEBUG: Full response content: {response}"
-                                    # )
-                                # ---------------------------------------
+                async def receive_from_client():
+                    try:
+                        while True:
+                            # We expect JSON indicating start/stop, or raw bytes for audio
+                            message = await websocket.receive()
+                            if "bytes" in message:
+                                data = message["bytes"]
+                                await session.send(
+                                    input={"data": data, "mime_type": "audio/pcm"},
+                                    end_of_turn=False,
+                                )
+                            elif "text" in message:
+                                # Might be control messages or text input
+                                text_data = message["text"]
+                                logger.info(
+                                    f"DEBUG: Received text from client: {text_data}"
+                                )
+                                await session.send(input=text_data, end_of_turn=True)
+                            # calculate a new deadline for continuing the conversation.
+                            deadline = asyncio.get_running_loop().time() + 15
+                            # set the new deadline
+                            timeout.reschedule(deadline)
+                    except WebSocketDisconnect:
+                        pass
+                    except Exception as e:
+                        logger.error(f"Error receiving from frontend: {e}")
 
-                                model_turn = server_content.model_turn
-                                if (
-                                    model_turn is not None
-                                    and model_turn.parts is not None
-                                ):
-                                    for part in model_turn.parts:
+                async def receive_from_gemini():
+                    try:
+                        while True:
+                            async for response in session.receive():
+                                server_content = response.server_content
+                                if server_content is not None:
+                                    # --- ADDED LOGS FOR DEBUGGING BARGE-IN ---
+                                    if getattr(server_content, "interrupted", False):
+                                        logger.info(
+                                            "DEBUG: Gemini response was INTERRUPTED by user audio (barge-in)"
+                                        )
+                                    if getattr(server_content, "turn_complete", False):
+                                        logger.info(
+                                            f"DEBUG: Gemini response turn COMPLETE {server_content}"
+                                        )
                                         # logger.info(
-                                        #     f"DEBUG: Received part. text: {bool(part.text)}, inline_data: {bool(part.inline_data)}, function_call: {bool(part.function_call)}"
+                                        #     f"DEBUG: Full response content: {response}"
                                         # )
-                                        if part.inline_data and part.inline_data.data:
-                                            await websocket.send_bytes(
-                                                part.inline_data.data
-                                            )
-                                        if part.text:
-                                            logger.info(
-                                                f"DEBUG: Text content: {part.text}"
-                                            )
-                                            await websocket.send_text(part.text)
+                                    # ---------------------------------------
 
-                            if response.tool_call:
-                                logger.info("TOOLS were called")
-                                loop = asyncio.get_event_loop()
-                                loop.create_task(
-                                    websocket.send_text(
-                                        f"TOOLS CALLED: {response.tool_call}"
+                                    model_turn = server_content.model_turn
+                                    if (
+                                        model_turn is not None
+                                        and model_turn.parts is not None
+                                    ):
+                                        for part in model_turn.parts:
+                                            # logger.info(
+                                            #     f"DEBUG: Received part. text: {bool(part.text)}, inline_data: {bool(part.inline_data)}, function_call: {bool(part.function_call)}"
+                                            # )
+                                            if (
+                                                part.inline_data
+                                                and part.inline_data.data
+                                            ):
+                                                await websocket.send_bytes(
+                                                    part.inline_data.data
+                                                )
+                                            if part.text:
+                                                logger.info(
+                                                    f"DEBUG: Text content: {part.text}"
+                                                )
+                                                await websocket.send_text(part.text)
+
+                                if response.tool_call:
+                                    logger.info("TOOLS were called")
+                                    loop = asyncio.get_event_loop()
+                                    loop.create_task(
+                                        websocket.send_text(
+                                            f"TOOLS CALLED: {response.tool_call}"
+                                        )
                                     )
-                                )
-                                function_responses = []
-                                for fc in response.tool_call.function_calls or []:
-                                    logger.info(
-                                        f"DEBUG: Tool call for function {fc.name} with args {fc.args}"
-                                    )
-                                    if fc.name == "generate_storyboard" and fc.args:
-                                        # Normalize steps: ensure each is a proper dict
-                                        raw_steps = fc.args.get("steps", [])
-                                        normalized_steps = []
-                                        for s in raw_steps:
-                                            if isinstance(s, str):
-                                                if s.endswith(","):
-                                                    s = s[:-1]
-                                                normalized_steps.append(json.loads(s))
-                                            elif isinstance(s, dict):
-                                                normalized_steps.append(s)
+                                    function_responses = []
+                                    for fc in response.tool_call.function_calls or []:
+                                        logger.info(
+                                            f"DEBUG: Tool call for function {fc.name} with args {fc.args}"
+                                        )
+                                        if fc.name == "generate_storyboard" and fc.args:
+                                            # Normalize steps: ensure each is a proper dict
+                                            raw_steps = fc.args.get("steps", [])
+                                            normalized_steps = []
+                                            for s in raw_steps:
+                                                if isinstance(s, str):
+                                                    if s.endswith(","):
+                                                        s = s[:-1]
+                                                    normalized_steps.append(
+                                                        json.loads(s)
+                                                    )
+                                                elif isinstance(s, dict):
+                                                    normalized_steps.append(s)
+                                                else:
+                                                    normalized_steps.append(dict(s))
+
+                                            # Validate steps using the function
+                                            validation_result_str = generate_storyboard(
+                                                normalized_steps
+                                            )
+                                            validation_result = json.loads(
+                                                validation_result_str
+                                            )
+
+                                            # Send the validation result back to Gemini
+                                            function_response = types.FunctionResponse(
+                                                id=fc.id,
+                                                name=fc.name,
+                                                response=validation_result,
+                                            )
+                                            function_responses.append(function_response)
+
+                                            if validation_result.get("result") is True:
+                                                logger.info(
+                                                    f"DEBUG: Validation passed, sending {len(normalized_steps)} steps to frontend"
+                                                )
+                                                storyboard_data = {
+                                                    "type": "storyboard_steps",
+                                                    "payload": normalized_steps,
+                                                }
+                                                loop = asyncio.get_event_loop()
+                                                loop.create_task(
+                                                    websocket.send_json(storyboard_data)
+                                                )
                                             else:
-                                                normalized_steps.append(dict(s))
-
-                                        # Validate steps using the function
-                                        validation_result_str = generate_storyboard(
-                                            normalized_steps
-                                        )
-                                        validation_result = json.loads(
-                                            validation_result_str
-                                        )
-
-                                        # Send the validation result back to Gemini
-                                        function_response = types.FunctionResponse(
-                                            id=fc.id,
-                                            name=fc.name,
-                                            response=validation_result,
-                                        )
-                                        function_responses.append(function_response)
-
-                                        if validation_result.get("result") is True:
-                                            logger.info(
-                                                f"DEBUG: Validation passed, sending {len(normalized_steps)} steps to frontend"
-                                            )
-                                            storyboard_data = {
-                                                "type": "storyboard_steps",
-                                                "payload": normalized_steps,
-                                            }
-                                            loop = asyncio.get_event_loop()
-                                            loop.create_task(
-                                                websocket.send_json(storyboard_data)
-                                            )
+                                                logger.info(
+                                                    f"DEBUG: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
+                                                )
                                         else:
-                                            logger.info(
-                                                f"DEBUG: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
+                                            # For other tool calls (e.g. get_current_time_and_date), use simple ok response
+                                            function_response = types.FunctionResponse(
+                                                id=fc.id,
+                                                name=fc.name,
+                                                response={"result": "ok"},
                                             )
-                                    else:
-                                        # For other tool calls (e.g. get_current_time_and_date), use simple ok response
-                                        function_response = types.FunctionResponse(
-                                            id=fc.id,
-                                            name=fc.name,
-                                            response={"result": "ok"},
-                                        )
-                                        function_responses.append(function_response)
+                                            function_responses.append(function_response)
 
-                                await session.send_tool_response(
-                                    function_responses=function_responses
-                                )
-                        # If the generator exits but the connection should stay open, we loop back.
-                        await asyncio.sleep(0.1)
-                except asyncio.CancelledError:
-                    pass
-                except Exception as e:
-                    logger.error(f"Error receiving from Gemini: {e}")
+                                    await session.send_tool_response(
+                                        function_responses=function_responses
+                                    )
+                            # calculate a new deadline for continuing the conversation.
+                            deadline = asyncio.get_running_loop().time() + 15
+                            # set the new deadline
+                            timeout.reschedule(deadline)
 
-            client_task = asyncio.create_task(receive_from_client())
-            gemini_task = asyncio.create_task(receive_from_gemini())
+                            # If the generator exits but the connection should stay open, we loop back.
+                            await asyncio.sleep(0.1)
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception as e:
+                        logger.error(f"Error receiving from Gemini: {e}")
 
-            done, pending = await asyncio.wait(
-                [client_task, gemini_task], return_when=asyncio.FIRST_COMPLETED
-            )
+                client_task = asyncio.create_task(receive_from_client())
+                gemini_task = asyncio.create_task(receive_from_gemini())
 
-            for task in pending:
-                task.cancel()
+                done, pending = await asyncio.wait(
+                    [client_task, gemini_task], return_when=asyncio.FIRST_COMPLETED
+                )
 
+                for task in pending:
+                    task.cancel()
+
+    except asyncio.TimeoutError:
+        logger.error("Connection to Gemini timed out.")
+        try:
+            await websocket.close()
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error connecting to Gemini: {e}")
         try:
