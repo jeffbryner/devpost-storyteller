@@ -228,7 +228,6 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     </button>
                 </div>
             )}
-
             <div className="chat-messages">
                 {messages.length === 0 ? (
                     <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
@@ -239,7 +238,6 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                         const isYou = msg.startsWith('You:');
                         const isGemini = msg.startsWith('Gemini:');
                         const isDebug = msg.startsWith('Debug:');
-                        const isConnectedMsg = msg === 'Connected to Gemini Live.' || msg === 'Disconnected.';
 
                         let messageClass = 'chat-message system';
                         let displayMsg = msg;
