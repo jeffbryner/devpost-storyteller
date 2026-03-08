@@ -223,6 +223,7 @@ resource "google_cloud_run_service" "frontend" {
           value = google_cloud_run_service.backend.status[0].url
         }
       }
+      timeout_seconds = 300
 
 
     }

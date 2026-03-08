@@ -82,6 +82,7 @@ resource "google_project_iam_member" "sa_roles" {
     "roles/storage.admin",                   # Manage GCS buckets, Read/Write Terraform state files
     "roles/logging.logWriter",               # Write build logs
     "roles/cloudbuild.builds.editor",        # Cloud Build Editor role
+    "roles/cloudbuild.builds.builder",       # Cloud Build Builder role
     "roles/resourcemanager.projectIamAdmin", # Modify IAM policies (if TF manages IAM)
     "roles/secretmanager.secretAccessor",    # Access secrets from Secret Manager
     "roles/secretmanager.viewer",
