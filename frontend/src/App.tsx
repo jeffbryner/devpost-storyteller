@@ -60,14 +60,14 @@ const Home: React.FC = () => {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <h1>Autism Event Storyboard Creator</h1>
-
-      {!steps && !generatedId && (
+      {!generatedId && (
         <LiveChat onStepsReceived={handleStepsReceived} />
       )}
 
       {steps && !generatedId && (
         <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-          <h2>Review Steps</h2>
+          <h2>Review & Refine Steps</h2>
+          <p style={{ color: '#555', marginBottom: '15px' }}>Chat with the assistant to modify these steps, or proceed to generate the final storyboard.</p>
           <ul style={{ textAlign: 'left' }}>
             {steps.map((step, idx) => (
               <li key={idx} style={{ marginBottom: '10px' }}>

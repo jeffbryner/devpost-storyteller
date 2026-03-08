@@ -38,18 +38,22 @@ def health_check():
 @app.websocket("/ws/ideate")
 async def websocket_ideate(websocket: WebSocket):
     await websocket.accept()
-
     system_instruction = (
         "You are an assistant helping a parent storyboard an upcoming event for an autistic child. "
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
-        "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects."
-        "When enough details are gathered, you MUST call the `generate_storyboard` function with a list of steps, each containing a step_title, description, and image_prompt. "
-        "Ensure the image_prompt includes details about words to avoid, whether to show people, etc"
-        "The steps will be put into a storyboard on a 3x2 column grid layout. Always break the steps down into 6 steps that would look good in this grid."
+        "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects. "
+        "When enough details are gathered, you MUST call the `generate_storyboard` function to draft the steps. "
+        "Each step must contain a step_title, description, and image_prompt. "
+        "Ensure the image_prompt includes details about words to avoid, whether to show people, etc. "
+        "The steps will be put into a storyboard on a 3x2 column grid layout. Always break the steps down into exactly 6 steps. "
+        "CRITICAL: Calling `generate_storyboard` DOES NOT end the conversation. It displays the draft steps to the user on their screen. "
+        "After calling it, you MUST ask the user for feedback on these drafted steps. "
+        "If the user asks to change, add, or remove steps, call `generate_storyboard` again with the updated list of exactly 6 steps. "
+        "Continue to refine the steps with the user until they are satisfied and give the all clear."
     )
 
     def generate_storyboard(steps: list[StoryboardStep]) -> str:
-        """Call this function when you have gathered enough details from the user to generate the storyboard. Pass the generated steps as arguments.
+        """Call this function to draft the storyboard steps and display them to the user, OR to update the drafted steps based on user feedback. Pass the generated steps as arguments.
 
         Args:
             steps: A list of StoryboardStep objects, each MUST contain a

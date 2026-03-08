@@ -204,11 +204,11 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     )}
                     <button onClick={() => {
                         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                            wsRef.current.send("Please call the generate_storyboard function now to finalize the storyboard.");
-                            setMessages((prev) => [...prev, 'You: (Requested final storyboard)']);
+                            wsRef.current.send("Please call the generate_storyboard function now to draft the storyboard steps.");
+                            setMessages((prev) => [...prev, 'You: (Requested to draft storyboard steps)']);
                         }
                     }}>
-                        Generate Storyboard Now
+                        Draft Steps Now
                     </button>
                     <button onClick={() => {
                         const debugSteps: Step[] = [
@@ -228,7 +228,6 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     </button>
                 </div>
             )}
-
             <div style={{ maxHeight: '300px', overflowY: 'auto', background: '#f9f9f9', padding: '10px', color: '#333' }}>
                 {messages.map((msg, idx) => (
                     <div key={idx} style={{ marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>
