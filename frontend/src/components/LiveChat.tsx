@@ -18,7 +18,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
     const wsRef = useRef<WebSocket | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const processorRef = useRef<ScriptProcessorNode | null>(null);
+    const workletNodeRef = useRef<AudioWorkletNode | null>(null);
     const nextPlayTimeRef = useRef<number>(0);
     const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
 
@@ -89,37 +89,24 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
             // Let AudioContext use the default hardware sample rate to avoid connection errors
             const audioContext = new window.AudioContext();
             audioContextRef.current = audioContext;
-            const inputSampleRate = audioContext.sampleRate;
+
+            await audioContext.audioWorklet.addModule('/capture-worklet.js');
 
             const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
+            const workletNode = new AudioWorkletNode(audioContext, 'capture-worklet', {
+                processorOptions: {
+                    sampleRate: audioContext.sampleRate
+                }
+            });
+            workletNodeRef.current = workletNode;
 
-            source.connect(processor);
-            processor.connect(audioContext.destination);
+            source.connect(workletNode);
+            // We don't need to connect workletNode to destination since it's only processing and sending data
 
-            processor.onaudioprocess = (e) => {
+            workletNode.port.onmessage = (e) => {
                 if (wsRef.current?.readyState === WebSocket.OPEN) {
-                    const inputData = e.inputBuffer.getChannelData(0);
-
-                    // Downsample to 16000Hz expected by Gemini Live
-                    const targetRate = 16000;
-                    const ratio = inputSampleRate / targetRate;
-                    const resampledLength = Math.round(inputData.length / ratio);
-                    const resampled = new Float32Array(resampledLength);
-
-                    for (let i = 0; i < resampledLength; i++) {
-                        resampled[i] = inputData[Math.floor(i * ratio)];
-                    }
-
-                    // Convert Float32Array to Int16Array (PCM 16-bit)
-                    const pcm16 = new Int16Array(resampled.length);
-                    for (let i = 0; i < resampled.length; i++) {
-                        let s = Math.max(-1, Math.min(1, resampled[i]));
-                        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    }
-
-                    wsRef.current.send(pcm16.buffer);
+                    // e.data is the Int16Array buffer sent from the worklet
+                    wsRef.current.send(e.data);
                 }
             };
 
@@ -130,9 +117,9 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
     };
 
     const stopRecording = () => {
-        if (processorRef.current) {
-            processorRef.current.disconnect();
-            processorRef.current = null;
+        if (workletNodeRef.current) {
+            workletNodeRef.current.disconnect();
+            workletNodeRef.current = null;
         }
         if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop());
@@ -188,7 +175,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                 <h3>Real-Time Conversational Ideation</h3>
                 <div>
                     {!isConnected ? (
-                        <button onClick={connect}>Connect to Assistant</button>
+                        <button onClick={connect}>Connect to Gemini</button>
                     ) : (
                         <button className="danger" onClick={disconnect}>Disconnect</button>
                     )}
@@ -210,7 +197,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                     }}>
                         Draft Steps Now
                     </button>
-                    <button className="secondary" onClick={() => {
+                    {/* <button className="secondary" onClick={() => {
                         const debugSteps: Step[] = [
                             { step_title: "Arriving at the Restaurant", description: "We will get to Olive Garden and find our table. It might be loud, but we know where we are going.", image_prompt: "Child arriving at a busy Olive Garden restaurant with a parent, looking for a table." },
                             { step_title: "Getting Ready to Order", description: "We will look at the menu we chose earlier. We can use noise-reducing headphones if needed to help focus.", image_prompt: "Child sitting at a restaurant table with a menu, possibly wearing noise-reducing headphones." },
@@ -225,13 +212,16 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                         setMessages((prev) => [...prev, 'Debug: Storyboard steps injected locally.']);
                     }}>
                         Debug Storyboard
-                    </button>
+                    </button> */}
                 </div>
             )}
+            <div className="chat-messages-header">
+                Event History
+            </div>
             <div className="chat-messages">
                 {messages.length === 0 ? (
                     <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                        Connect to the assistant to start ideating...
+                        Connect to the assistant to start collaborating...
                     </div>
                 ) : (
                     messages.map((msg, idx) => {
