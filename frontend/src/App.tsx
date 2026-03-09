@@ -59,8 +59,8 @@ const Home: React.FC = () => {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1 className="app-title">Autism Event Storyboard Creator</h1>
-        <p className="app-subtitle">Generate calming visual storyboards interactively</p>
+        <h1 className="app-title">Event Storyboard Creator</h1>
+        <p className="app-subtitle">Interactively generate calming visual storyboards for your event</p>
       </div>
 
       {!generatedId && (
