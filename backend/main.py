@@ -5,7 +5,14 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from storyboard import router as storyboard_router
-from services import MODEL, LIVE_MODEL, ai_client, logger, get_current_time_and_date
+from services import (
+    MODEL,
+    LIVE_MODEL,
+    ai_client,
+    logger,
+    get_current_time_and_date,
+    DEFAULT_AUDIO_TIMEOUT,
+)
 from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +50,7 @@ async def websocket_ideate(websocket: WebSocket):
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
         "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects. "
         "When enough details are gathered, you MUST call the `generate_storyboard` function to draft the steps. "
-        "Each step must contain a step_title, description, and image_prompt. "
+        "CRITICAL: Each step MUST contain a step_title, description, and image_prompt. "
         "Ensure the image_prompt includes details about words to avoid, whether to show people, etc. "
         "The steps will be put into a storyboard on a 3x2 column grid layout. Always break the steps down into exactly 6 steps. "
         "CRITICAL: Calling `generate_storyboard` DOES NOT end the conversation. It displays the draft steps to the user on their screen. "
@@ -154,7 +161,7 @@ async def websocket_ideate(websocket: WebSocket):
     try:
         # Wrap the connection attempt in a timeout to prevent hanging on unresponsive API
         # and improve edge-case handling.
-        async with asyncio.timeout(10.0) as timeout:
+        async with asyncio.timeout(DEFAULT_AUDIO_TIMEOUT) as timeout:
             async with ai_client.aio.live.connect(
                 model=LIVE_MODEL, config=config
             ) as session:
@@ -184,7 +191,10 @@ async def websocket_ideate(websocket: WebSocket):
                                 )
                                 await session.send(input=text_data, end_of_turn=True)
                             # calculate a new deadline for continuing the conversation.
-                            deadline = asyncio.get_running_loop().time() + 15
+                            deadline = (
+                                asyncio.get_running_loop().time()
+                                + DEFAULT_AUDIO_TIMEOUT
+                            )
                             # set the new deadline
                             timeout.reschedule(deadline)
                     except WebSocketDisconnect:
@@ -235,13 +245,6 @@ async def websocket_ideate(websocket: WebSocket):
                                                 await websocket.send_text(part.text)
 
                                 if response.tool_call:
-                                    logger.info("TOOLS were called")
-                                    loop = asyncio.get_event_loop()
-                                    loop.create_task(
-                                        websocket.send_text(
-                                            f"TOOLS CALLED: {response.tool_call}"
-                                        )
-                                    )
                                     function_responses = []
                                     for fc in response.tool_call.function_calls or []:
                                         logger.info(
@@ -280,6 +283,7 @@ async def websocket_ideate(websocket: WebSocket):
                                             function_responses.append(function_response)
 
                                             if validation_result.get("result") is True:
+                                                # send the steps to the frontend to display, and ask for user feedback on them
                                                 logger.info(
                                                     f"DEBUG: Validation passed, sending {len(normalized_steps)} steps to frontend"
                                                 )
@@ -292,8 +296,8 @@ async def websocket_ideate(websocket: WebSocket):
                                                     websocket.send_json(storyboard_data)
                                                 )
                                             else:
-                                                logger.info(
-                                                    f"DEBUG: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
+                                                logger.error(
+                                                    f"ERROR: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
                                                 )
                                         else:
                                             # For other tool calls (e.g. get_current_time_and_date), use simple ok response
@@ -308,7 +312,10 @@ async def websocket_ideate(websocket: WebSocket):
                                         function_responses=function_responses
                                     )
                             # calculate a new deadline for continuing the conversation.
-                            deadline = asyncio.get_running_loop().time() + 15
+                            deadline = (
+                                asyncio.get_running_loop().time()
+                                + DEFAULT_AUDIO_TIMEOUT
+                            )
                             # set the new deadline
                             timeout.reschedule(deadline)
 

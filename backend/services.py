@@ -35,9 +35,11 @@ bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")
 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
 
+# Settings
 IMAGE_MODEL = "gemini-3-pro-image-preview"
 MODEL = "gemini-3.1-pro-preview"
 LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
+DEFAULT_AUDIO_TIMEOUT = int(os.getenv("DEFAULT_AUDIO_TIMEOUT", "15"))  # seconds
 
 ai_client = genai.Client(vertexai=True, project=project_id, location=location)
 

@@ -198,9 +198,9 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
             {isConnected && (
                 <div className="chat-controls">
                     {!isRecording ? (
-                        <button className="success" onClick={startRecording}>🎙️ Start Speaking</button>
+                        <button className="success" onClick={startRecording}>🎙️ Enable Microphone</button>
                     ) : (
-                        <button className="danger pulsate" onClick={stopRecording}>⏹️ Stop Speaking</button>
+                        <button className="danger pulsate" onClick={stopRecording}>⏹️ Disable Microphone</button>
                     )}
                     <button className="secondary" onClick={() => {
                         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
