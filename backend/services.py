@@ -94,7 +94,7 @@ def generate_storyboard_image(steps: list, theme: str):
         ai_image_client = genai.Client(
             vertexai=True, api_key=os.environ.get("GOOGLE_CLOUD_IMAGE_API_KEY")
         )
-        response = ai_image_client.models.generate_content(
+        response = ai_image_client.models.generate_content_stream(
             model=IMAGE_MODEL,
             contents=[prompt],
             config=types.GenerateContentConfig(
@@ -126,33 +126,21 @@ def generate_storyboard_image(steps: list, theme: str):
             ),
         )
 
-        # Diagnostic logging to understand empty responses
-        logger.info(f"GEMINI response type: {type(response)}")
-        if hasattr(response, "candidates") and response.candidates:
-            for i, candidate in enumerate(response.candidates):
-                logger.info(
-                    f"GEMINI candidate[{i}] finish_reason: {getattr(candidate, 'finish_reason', 'N/A')}"
-                )
-                logger.info(
-                    f"GEMINI candidate[{i}] safety_ratings: {getattr(candidate, 'safety_ratings', 'N/A')}"
-                )
-        else:
-            logger.warning("GEMINI response has no candidates!")
-        if hasattr(response, "prompt_feedback"):
-            logger.info(f"GEMINI prompt_feedback: {response.prompt_feedback}")
-        # logger.info(f"GEMINI response.parts: {response.parts}")
-
         returned_image = None
-        for part in response.parts or []:
-            # logger.info(f"GEMINI Received part: {part}")
-            if part.text is not None:
-                print(part.text)
-            elif part.inline_data is not None:
-                image = part.as_image()
-                returned_image = image
-        return returned_image
+        for chunk in response:
+            if hasattr(chunk, "parts") and chunk.parts:
+                for part in chunk.parts:
+                    if part.text is not None:
+                        logger.debug(f"Received text chunk: {part.text}")
+                        yield {"type": "text", "content": part.text}
+                    elif part.inline_data is not None:
+                        returned_image = part.as_image()
+
+        if returned_image:
+            yield {"type": "image", "content": returned_image}
+
     except Exception as e:
         logger.error(
             f"generate_storyboard_image: Error generating storyboard image: {e}"
         )
-        return None
+        yield {"type": "error", "content": str(e)}
