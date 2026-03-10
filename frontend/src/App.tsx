@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { LiveChat, type Step } from './components/LiveChat';
 import { StoryboardView } from './components/StoryboardView';
 import { API_BASE_URL } from './config';
@@ -9,6 +10,7 @@ const Home: React.FC = () => {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [theme, setTheme] = useState<string>('Black and White Cartoon');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [streamingText, setStreamingText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [generatedId, setGeneratedId] = useState<string | null>(null);
 
@@ -25,6 +27,7 @@ const Home: React.FC = () => {
 
     setIsGenerating(true);
     setError(null);
+    setStreamingText('');
 
     // Sanitize steps data: Ensure each step is an object, not a string.
     const processedSteps = steps.map(step =>
@@ -47,9 +50,51 @@ const Home: React.FC = () => {
         throw new Error('Failed to generate storyboard');
       }
 
-      const data = await response.json();
-      setGeneratedId(data.id);
-      // navigate(`/storyboard/${data.id}`);
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let done = false;
+        let buffer = '';
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            const decodedChunk = decoder.decode(value, { stream: true });
+            console.log("DEBUG - Received chunk from fetch:", decodedChunk);
+            buffer += decodedChunk;
+
+            // Handle both \n\n and \r\n\r\n
+            const lines = buffer.split(/\r?\n\r?\n/);
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const dataStr = line.substring(6);
+                let data;
+                try {
+                  data = JSON.parse(dataStr);
+                  console.log("DEBUG - Parsed SSE data:", data);
+                } catch (e) {
+                  console.error("DEBUG - Error parsing SSE data JSON:", dataStr);
+                  continue;
+                }
+
+                if (data.type === 'text') {
+                  setStreamingText((prev: string) => prev + data.content);
+                } else if (data.type === 'error') {
+                  setError(data.message || 'An error occurred during generation.');
+                  setIsGenerating(false);
+                  return;
+                } else if (data.type === 'complete') {
+                  setGeneratedId(data.id);
+                }
+              }
+            }
+          }
+        }
+      }
+
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -120,6 +165,28 @@ const Home: React.FC = () => {
               {isGenerating ? 'Generating Storyboard...' : 'Generate Final Storyboard'}
             </button>
           </div>
+
+          {isGenerating && (
+            <div className="streaming-text-container" style={{
+              marginTop: '30px',
+              padding: '20px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              textAlign: 'left'
+            }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#64748b' }}>Generating your storyboard...</h3>
+              <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>
+                {streamingText ? (
+                  <ReactMarkdown>{streamingText}</ReactMarkdown>
+                ) : (
+                  <div className="pulse-text" style={{ fontStyle: 'italic', color: '#94a3b8' }}>
+                    Analyzing steps and preparing to generate...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
