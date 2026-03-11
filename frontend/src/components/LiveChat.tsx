@@ -93,11 +93,20 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioConstraints = {
+                sampleRate: 16000, // Gemini expects 16kHz audio
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            };
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
             streamRef.current = stream;
 
-            // Let AudioContext use the default hardware sample rate to avoid connection errors
-            const audioContext = new window.AudioContext();
+            // Use Gemini's expected sample rate of 16kHz for better compatibility and performance
+            const audioContext = new window.AudioContext({
+                latencyHint: "interactive",
+                sampleRate: 16000
+            });
             audioContextRef.current = audioContext;
 
             await audioContext.audioWorklet.addModule('/capture-worklet.js');
@@ -142,7 +151,10 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
 
     const playAudio = async (arrayBuffer: ArrayBuffer) => {
         if (!audioContextRef.current) {
-            audioContextRef.current = new window.AudioContext();
+            audioContextRef.current = new window.AudioContext({
+                latencyHint: "interactive",
+                sampleRate: 24000
+            });
         }
 
         const pcm16 = new Int16Array(arrayBuffer);
