@@ -280,7 +280,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                             <ReactMarkdown>{streamingText}</ReactMarkdown>
                         ) : (
                             <div className="pulse-text" style={{ fontStyle: 'italic', color: '#94a3b8' }}>
-                                Analyzing steps and preparing to generate...this could take a few moments.
+                                Analyzing steps and preparing to generate the StepPrep storyboard...this could take a few moments.
                             </div>
                         )}
                     </div>
