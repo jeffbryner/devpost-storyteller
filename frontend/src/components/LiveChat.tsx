@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { WS_BASE_URL } from '../config';
 
 export interface Step {
@@ -9,9 +10,11 @@ export interface Step {
 
 interface LiveChatProps {
     onStepsReceived?: (steps: Step[]) => void;
+    isGenerating?: boolean;
+    streamingText?: string;
 }
 
-export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
+export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGenerating, streamingText }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [messages, setMessages] = useState<string[]>([]);
@@ -21,6 +24,13 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
     const nextPlayTimeRef = useRef<number>(0);
     const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, isGenerating, streamingText]);
 
     const connect = async () => {
         try {
@@ -219,7 +229,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                 Event History
             </div>
             <div className="chat-messages">
-                {messages.length === 0 ? (
+                {messages.length === 0 && !isGenerating ? (
                     <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
                         Connect to the assistant to start collaborating...
                     </div>
@@ -249,6 +259,21 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived }) => {
                         );
                     })
                 )}
+                {isGenerating && (
+                    <div className="chat-message gemini" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ fontWeight: '600', marginBottom: '8px', color: '#1e3a8a', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Generating Storyboard
+                        </div>
+                        {streamingText ? (
+                            <ReactMarkdown>{streamingText}</ReactMarkdown>
+                        ) : (
+                            <div className="pulse-text" style={{ fontStyle: 'italic', color: '#94a3b8' }}>
+                                Analyzing steps and preparing to generate...this could take a few moments.
+                            </div>
+                        )}
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
             </div>
         </div>
     );

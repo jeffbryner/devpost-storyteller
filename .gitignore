@@ -5,3 +5,4 @@ cicd/*/terraform.tfvars
 cicd/*/.terraform*
 cicd/*/*tfstate*
 cicd/prod/.terraform.lock.hcl
+.DS_Store
