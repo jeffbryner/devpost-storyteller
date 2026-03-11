@@ -46,7 +46,7 @@ const Home: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate storyboard');
+        throw new Error('Failed to generate StepPrep');
       }
 
       if (response.body) {
@@ -103,8 +103,8 @@ const Home: React.FC = () => {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1 className="app-title">Event Storyboard Creator</h1>
-        <p className="app-subtitle">Interactively generate calming visual storyboards for your event</p>
+        <h1 className="app-title">StepPrep</h1>
+        <p className="app-subtitle">Interactively generate calming visual step-by-step guides for your event</p>
       </div>
 
       {!generatedId && (
@@ -119,7 +119,7 @@ const Home: React.FC = () => {
         <div className="panel-section">
           <div className="panel-header">
             <h2 style={{ margin: 0, color: '#1e293b' }}>Review & Refine Steps</h2>
-            <p style={{ color: '#64748b', margin: '8px 0 0' }}>Chat with the assistant to modify these steps, or proceed to generate the final storyboard.</p>
+            <p style={{ color: '#64748b', margin: '8px 0 0' }}>Chat with the assistant to modify these steps, or proceed to generate the final StepPrep.</p>
           </div>
 
           <div className="steps-grid">
@@ -167,7 +167,7 @@ const Home: React.FC = () => {
               onClick={handleGenerate}
               disabled={isGenerating}
             >
-              {isGenerating ? 'Generating Storyboard...' : 'Generate Final Storyboard'}
+              {isGenerating ? 'Generating StepPrep...' : 'Generate Final StepPrep'}
             </button>
           </div>
         </div>
@@ -175,13 +175,13 @@ const Home: React.FC = () => {
 
       {generatedId && (
         <div className="panel-section" style={{ textAlign: 'center', borderColor: '#10b981', background: '#f0fdf4' }}>
-          <h2 style={{ color: '#059669', marginBottom: '8px' }}>Storyboard Generated!</h2>
-          <p style={{ color: '#065f46', marginBottom: '24px' }}>Your storyboard has been successfully created.</p>
+          <h2 style={{ color: '#059669', marginBottom: '8px' }}>StepPrep Generated!</h2>
+          <p style={{ color: '#065f46', marginBottom: '24px' }}>Your StepPrep has been successfully created.</p>
           <Link
             to={`/storyboard/${generatedId}`}
             style={{ display: 'inline-block', padding: '12px 24px', background: '#10b981', color: 'white', textDecoration: 'none', borderRadius: '8px', fontWeight: '500', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' }}
           >
-            View Storyboard
+            View StepPrep
           </Link>
         </div>
       )}

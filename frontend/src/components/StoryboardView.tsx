@@ -62,7 +62,7 @@ export const StoryboardView: React.FC = () => {
     useEffect(() => {
         const fetchStoryboard = async () => {
             if (!id) {
-                setError('No storyboard ID provided.');
+                setError('No StepPrep ID provided.');
                 setLoading(false);
                 return;
             }
@@ -71,9 +71,9 @@ export const StoryboardView: React.FC = () => {
                 const response = await fetch(`${API_BASE_URL}/api/storyboard/${id}`);
                 if (!response.ok) {
                     if (response.status === 404) {
-                        setError('Storyboard not found.');
+                        setError('StepPrep not found.');
                     } else {
-                        setError('Failed to load storyboard.');
+                        setError('Failed to load StepPrep.');
                     }
                     return;
                 }
@@ -81,7 +81,7 @@ export const StoryboardView: React.FC = () => {
                 setStoryboard(result.data as StoryboardData);
             } catch (err: any) {
                 console.error('Error fetching storyboard:', err);
-                setError(err.message || 'Failed to load storyboard.');
+                setError(err.message || 'Failed to load StepPrep.');
             } finally {
                 setLoading(false);
             }
@@ -109,8 +109,8 @@ export const StoryboardView: React.FC = () => {
     if (loading) {
         return (
             <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h2>Loading Storyboard...</h2>
-                <p>Please wait while we fetch your storyboard.</p>
+                <h2>Loading StepPrep...</h2>
+                <p>Please wait while we fetch your StepPrep.</p>
             </div>
         );
     }
@@ -152,7 +152,7 @@ export const StoryboardView: React.FC = () => {
     return (
         <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>Your Storyboard</h2>
+                <h2>Your StepPrep</h2>
                 <Link
                     to="/"
                     style={{
@@ -181,7 +181,7 @@ export const StoryboardView: React.FC = () => {
                 }}>
                     <img
                         src={storyboard.storyboard_image_url}
-                        alt="Storyboard"
+                        alt="StepPrep"
                         style={{ width: '100%', display: 'block' }}
                     />
                     {/* Panel overlay grid — sits on top of the image without modifying it */}
@@ -220,7 +220,7 @@ export const StoryboardView: React.FC = () => {
                     marginBottom: '30px',
                     color: '#999',
                 }}>
-                    <p>No storyboard image was generated.</p>
+                    <p>No StepPrep image was generated.</p>
                 </div>
             )}
 

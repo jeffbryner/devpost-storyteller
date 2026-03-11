@@ -51,7 +51,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                         const parsed = JSON.parse(event.data);
                         if (parsed.type === "storyboard_steps" && parsed.payload && onStepsReceived) {
                             onStepsReceived(parsed.payload);
-                            setMessages((prev) => [...prev, `Gemini: Storyboard steps received.`]); // Add a message for UX
+                            setMessages((prev) => [...prev, `Gemini: StepPrep steps received.`]); // Add a message for UX
                         } else {
                             // If it's valid JSON but not a storyboard message, or just plain text
                             setMessages((prev) => [...prev, `Gemini: ${event.data}`]);
@@ -213,8 +213,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                     )}
                     <button className="secondary" onClick={() => {
                         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                            wsRef.current.send("Please call the generate_storyboard function now to draft the storyboard steps.");
-                            setMessages((prev) => [...prev, 'You: (Requested to draft storyboard steps)']);
+                            wsRef.current.send("Please call the generate_storyboard function now to draft the StepPrep steps.");
+                            setMessages((prev) => [...prev, 'You: (Requested to draft StepPrep steps)']);
                         }
                     }}>
                         Draft Steps Now
@@ -231,9 +231,9 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                         if (onStepsReceived) {
                             onStepsReceived(debugSteps);
                         }
-                        setMessages((prev) => [...prev, 'Debug: Storyboard steps injected locally.']);
+                        setMessages((prev) => [...prev, 'Debug: StepPrep steps injected locally.']);
                     }}>
-                        Debug Storyboard
+                        Debug StepPrep
                     </button> */}
                 </div>
             )}
@@ -274,7 +274,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                 {isGenerating && (
                     <div className="chat-message gemini" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                         <div style={{ fontWeight: '600', marginBottom: '8px', color: '#1e3a8a', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Generating Storyboard
+                            Generating StepPrep
                         </div>
                         {streamingText ? (
                             <ReactMarkdown>{streamingText}</ReactMarkdown>

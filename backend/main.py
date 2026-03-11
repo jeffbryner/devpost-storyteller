@@ -18,7 +18,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from google.genai.types import SpeechConfig, VoiceConfig, PrebuiltVoiceConfig
 
-app = FastAPI(title="Autism Event Storyboard API")
+app = FastAPI(title="StepPrep API")
 
 # Setup CORS for frontend
 app.add_middleware(
@@ -34,7 +34,7 @@ app.include_router(storyboard_router)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Autism Event Storyboard API"}
+    return {"message": "Welcome to the StepPrep API"}
 
 
 @app.get("/health")
@@ -46,13 +46,13 @@ def health_check():
 async def websocket_ideate(websocket: WebSocket):
     await websocket.accept()
     system_instruction = (
-        "You are an assistant helping a parent storyboard an upcoming event for an autistic child. "
+        "You are a StepPrep assistant helping a parent create a step-by-step visual guide for an upcoming event for an autistic child. "
         "Interactively ask about the event, what the child might find challenging, and gather necessary details. "
-        "Be sure to probe for words to avoid and whether or not the storyboard should contain people or just objects. "
+        "Be sure to probe for words to avoid and whether or not the StepPrep guide should contain people or just objects. "
         "When enough details are gathered, you MUST call the `generate_storyboard` function to draft the steps. "
         "CRITICAL: Each step MUST contain a step_title, description, and image_prompt. "
         "Ensure the image_prompt includes details about words to avoid, whether to show people, etc. "
-        "The steps will be put into a storyboard on a 3x2 column grid layout. Always break the steps down into exactly 6 steps. "
+        "The steps will be put into a StepPrep guide on a 3x2 column grid layout. Always break the steps down into exactly 6 steps. "
         "CRITICAL: Calling `generate_storyboard` DOES NOT end the conversation. It displays the draft steps to the user on their screen. "
         "After calling it, you MUST ask the user for feedback on these drafted steps. "
         "If the user asks to change, add, or remove steps, call `generate_storyboard` again with the updated list of exactly 6 steps. "
