@@ -63,15 +63,9 @@ async def websocket_ideate(websocket: WebSocket):
         """Call this function to draft the storyboard steps and display them to the user, OR to update the drafted steps based on user feedback. Pass the generated steps as arguments.
 
         Args:
-            steps: A list of StoryboardStep objects, each MUST contain a
-             - 'step_title'
-             - 'description'
-             - 'image_prompt'.
-        The class definition is:
-        class StoryboardStep(BaseModel):
-            step_title: str
-            description: str
-            image_prompt: str
+            steps: A JSON array of dictionaries representing each step.
+                   Each dictionary MUST contain exactly these keys: 'step_title', 'description', and 'image_prompt'.
+                   DO NOT return Python code, class definitions, or class instantiations. ONLY raw JSON objects.
 
         Returns:
             A JSON string with "result": true if all steps are valid,
@@ -90,18 +84,16 @@ async def websocket_ideate(websocket: WebSocket):
                 f"Please adjust the number of steps to be exactly 6."
             )
 
-        for i, step in enumerate(steps):
-            # Handle step as dict or Pydantic model
-            step_data = (
-                step
-                if isinstance(step, dict)
-                else (step.model_dump() if hasattr(step, "model_dump") else dict(step))
-            )
+        for i, step_data in enumerate(steps):
+            if not isinstance(step_data, dict):
+                errors.append(f"Step {i+1} is not a valid JSON object.")
+                continue
+
             missing = required_fields - set(step_data.keys())
             empty = {
                 f
                 for f in required_fields
-                if f in step_data and not str(step_data[f]).strip()
+                if f in step_data and not str(step_data.get(f, "")).strip()
             }
 
             if missing:
@@ -217,9 +209,20 @@ async def websocket_ideate(websocket: WebSocket):
                                         logger.info(
                                             f"DEBUG: Gemini response turn COMPLETE {server_content}"
                                         )
-                                        # logger.info(
-                                        #     f"DEBUG: Full response content: {response}"
-                                        # )
+
+                                        reason = getattr(
+                                            server_content, "turn_complete_reason", None
+                                        )
+                                        if reason and "MALFORMED_FUNCTION_CALL" in str(
+                                            reason
+                                        ):
+                                            logger.warning(
+                                                "Detected MALFORMED_FUNCTION_CALL. Sending automated retry nudge to Gemini..."
+                                            )
+                                            await session.send(
+                                                input="Your last function call was malformed. Please carefully review the schema, fix any JSON syntax errors, and call the generate_storyboard function again.",
+                                                end_of_turn=True,
+                                            )
                                     # ---------------------------------------
 
                                     model_turn = server_content.model_turn
@@ -254,22 +257,44 @@ async def websocket_ideate(websocket: WebSocket):
                                             # Normalize steps: ensure each is a proper dict
                                             raw_steps = fc.args.get("steps", [])
                                             normalized_steps = []
+                                            parsing_error = None
                                             for s in raw_steps:
                                                 if isinstance(s, str):
                                                     if s.endswith(","):
                                                         s = s[:-1]
-                                                    normalized_steps.append(
-                                                        json.loads(s)
-                                                    )
+                                                    try:
+                                                        normalized_steps.append(
+                                                            json.loads(s)
+                                                        )
+                                                    except Exception as e:
+                                                        logger.error(
+                                                            f"JSON parsing error for step '{s}': {e}"
+                                                        )
+                                                        parsing_error = f"I failed to parse one of your steps as JSON: {e}. Please ensure you are passing valid JSON objects inside the steps array, not Python code or classes."
+                                                        break
                                                 elif isinstance(s, dict):
                                                     normalized_steps.append(s)
                                                 else:
-                                                    normalized_steps.append(dict(s))
+                                                    try:
+                                                        normalized_steps.append(dict(s))
+                                                    except Exception:
+                                                        parsing_error = "I received a step that was neither a dictionary nor a JSON string. Please pass only JSON objects."
+                                                        break
 
-                                            # Validate steps using the function
-                                            validation_result_str = generate_storyboard(
-                                                normalized_steps
-                                            )
+                                            if parsing_error:
+                                                validation_result_str = json.dumps(
+                                                    {
+                                                        "result": False,
+                                                        "errors": [parsing_error],
+                                                    }
+                                                )
+                                            else:
+                                                # Validate steps using the function
+                                                validation_result_str = (
+                                                    generate_storyboard(
+                                                        normalized_steps
+                                                    )
+                                                )
                                             validation_result = json.loads(
                                                 validation_result_str
                                             )
