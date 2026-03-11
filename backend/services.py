@@ -2,6 +2,7 @@ import sys
 import os
 import firebase_admin
 from firebase_admin import firestore, storage
+from google.cloud.firestore_v1.client import Client as FirestoreClient
 from google import genai
 from google.genai import types
 import google.auth
@@ -25,7 +26,7 @@ credentials, PROJECT_ID = google.auth.default()
 # Initialize Firebase Admin
 # Defaults to using GOOGLE_APPLICATION_CREDENTIALS or Compute Engine environment
 firebase_app = firebase_admin.initialize_app()
-db = firestore.client()
+db: FirestoreClient = firestore.client()
 # Note: storage.bucket() requires a default bucket name configured or passed explicitly,
 # We will use the default bucket initialization here.
 bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")

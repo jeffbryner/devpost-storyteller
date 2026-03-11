@@ -1,11 +1,13 @@
+from typing import cast
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from models import StoryboardRequest, StoryboardResponse, StoryboardStep
 import uuid
 import datetime
 import json
 from services import (
-    ai_client,
     db,
     bucket,
     generate_storyboard_image,
@@ -43,7 +45,7 @@ async def create_storyboard(request: StoryboardRequest):
 
                 elif item["type"] == "image":
                     generated_image = item["content"]
-                    image_bytes = generated_image.image_bytes
+                    image_bytes = generated_image.image_bytes  # type: ignore[union-attr]
 
                     # Upload to Cloud Storage
                     image_filename = f"storyboards/{storyboard_id}/storyboard.jpg"
@@ -103,7 +105,10 @@ async def create_storyboard(request: StoryboardRequest):
 @router.get("/api/storyboard/{storyboard_id}", response_model=StoryboardResponse)
 def get_storyboard(storyboard_id: str):
     try:
-        doc_snapshot = db.collection("storyboards").document(storyboard_id).get()
+        doc_snapshot = cast(
+            DocumentSnapshot,
+            db.collection("storyboards").document(storyboard_id).get(),
+        )
         if not doc_snapshot.exists:
             raise HTTPException(status_code=404, detail="Storyboard not found.")
         doc_data = doc_snapshot.to_dict()
