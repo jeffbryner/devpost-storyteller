@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
 import { LiveChat, type Step } from './components/LiveChat';
 import { StoryboardView } from './components/StoryboardView';
 import { API_BASE_URL } from './config';
@@ -109,7 +108,11 @@ const Home: React.FC = () => {
       </div>
 
       {!generatedId && (
-        <LiveChat onStepsReceived={handleStepsReceived} />
+        <LiveChat
+          onStepsReceived={handleStepsReceived}
+          isGenerating={isGenerating}
+          streamingText={streamingText}
+        />
       )}
 
       {steps && !generatedId && (
@@ -122,8 +125,10 @@ const Home: React.FC = () => {
           <div className="steps-grid">
             {steps.map((step, idx) => (
               <div key={idx} className="step-card">
-                <div className="step-number">{idx + 1}</div>
-                <div className="step-title">{step.step_title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="step-number">{idx + 1}</div>
+                  <div className="step-title">{step.step_title}</div>
+                </div>
                 <p className="step-desc">{step.description}</p>
               </div>
             ))}
@@ -165,28 +170,6 @@ const Home: React.FC = () => {
               {isGenerating ? 'Generating Storyboard...' : 'Generate Final Storyboard'}
             </button>
           </div>
-
-          {isGenerating && (
-            <div className="streaming-text-container" style={{
-              marginTop: '30px',
-              padding: '20px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              textAlign: 'left'
-            }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#64748b' }}>Generating your storyboard...</h3>
-              <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>
-                {streamingText ? (
-                  <ReactMarkdown>{streamingText}</ReactMarkdown>
-                ) : (
-                  <div className="pulse-text" style={{ fontStyle: 'italic', color: '#94a3b8' }}>
-                    Analyzing steps and preparing to generate...
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
