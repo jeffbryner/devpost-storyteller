@@ -161,7 +161,8 @@ async def websocket_ideate(websocket: WebSocket):
                 # Immediately prompt the model to greet the user upon successful connection
                 logger.info("Connection established, sending initial greeting prompt")
                 await session.send_client_content(
-                    turns=types.Content(role="user", parts=[types.Part(text="Hello!")])
+                    turns=types.Content(role="user", parts=[types.Part(text="Hello!")]),
+                    turn_complete=True,
                 )
 
                 async def receive_from_client():
