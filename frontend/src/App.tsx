@@ -103,7 +103,7 @@ const Home: React.FC = () => {
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1 className="app-title">StepPrep</h1>
+        <img src="/stepprep.jpg" alt="StepPrep" className="app-logo" />
         <p className="app-subtitle">Interactively generate calming visual step-by-step guides for your event</p>
       </div>
 
