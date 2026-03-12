@@ -212,6 +212,9 @@ async def websocket_ideate(websocket: WebSocket):
                                         logger.info(
                                             "DEBUG: Gemini response was INTERRUPTED by user audio (barge-in)"
                                         )
+                                        # Tell frontend to stop playing buffered audio
+                                        await websocket.send_json({"type": "interrupt"})
+
                                     if getattr(server_content, "turn_complete", False):
                                         logger.info(
                                             f"DEBUG: Gemini response turn COMPLETE {server_content}"

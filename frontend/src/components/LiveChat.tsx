@@ -52,6 +52,17 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
                         if (parsed.type === "storyboard_steps" && parsed.payload && onStepsReceived) {
                             onStepsReceived(parsed.payload);
                             setMessages((prev) => [...prev, `Gemini: StepPrep steps received.`]); // Add a message for UX
+                        } else if (parsed.type === "interrupt") {
+                            // Stop all currently playing and scheduled audio
+                            activeSourcesRef.current.forEach(source => {
+                                try { source.stop(); } catch (e) { }
+                            });
+                            activeSourcesRef.current = [];
+
+                            // Reset the audio playback timer so the NEXT response plays immediately
+                            nextPlayTimeRef.current = 0;
+
+                            setMessages((prev) => [...prev, 'System: Audio playback interrupted by user.']);
                         } else {
                             // If it's valid JSON but not a storyboard message, or just plain text
                             setMessages((prev) => [...prev, `Gemini: ${event.data}`]);
