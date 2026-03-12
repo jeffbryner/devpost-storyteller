@@ -84,10 +84,17 @@ async def websocket_ideate(websocket: WebSocket):
                 f"Please adjust the number of steps to be exactly 6."
             )
 
-        for i, step_data in enumerate(steps):
-            if not isinstance(step_data, dict):
+        for i, raw_step_data in enumerate(steps):
+            if not isinstance(raw_step_data, dict):
                 errors.append(f"Step {i+1} is not a valid JSON object.")
                 continue
+
+            # Gemini sometimes hallucinates extra literal quotes around JSON keys
+            # e.g., {'"step_title"': '...'} instead of {'step_title': '...'}
+            step_data = {}
+            for k, v in raw_step_data.items():
+                step_data[k.strip(" \"'")] = v
+            steps[i] = step_data  # type: ignore
 
             missing = required_fields - set(step_data.keys())
             empty = {
