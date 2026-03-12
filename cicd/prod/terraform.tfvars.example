@@ -1,0 +1,8 @@
+org_id          = "995123456789"
+billing_account = "012345-12345-567F"
+project_name    = "some-project-name" # will be prefaced with "prj-" to reference the actual project name
+folder_id       = "4454328123456"
+github_org      = "github_user_name"
+github_repo     = "repo_name"
+bucket          = "bkt-tfstate-prj-project-name" # used for terraform remote state storage, not used in any resources
+
