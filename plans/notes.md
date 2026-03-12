@@ -1,5 +1,5 @@
 ## Troubleshooting: Front end env setting for the backend URL ##
-Solution for making the backend API URL configurable:
+Solution for making the backend API URL configurable for deployment into frontend/backend cloudrun containers:
 
 1. __`frontend/src/config.ts`__ — Central config that reads `window.__ENV__` with localhost fallback
 2. __`frontend/config.js.template`__ — Template with `${API_BASE_URL}` placeholder
@@ -9,3 +9,73 @@ Solution for making the backend API URL configurable:
 6. __Updated App.tsx, LiveChat.tsx, StoryboardView.tsx__ — Use `API_BASE_URL`/`WS_BASE_URL` from config
 
 The PWA service worker intercepting `/config.js` and serving the cached `index.html` was the sneaky root cause. For future reference — any runtime-generated files need to be excluded from the service worker's navigation fallback and caching strategies.
+
+
+## Gemini Live API function calling: backend/frontend coordination
+Exposing functions to the Gemini live API that should interface to a front end requires a bit of trickery. 
+
+Gemini will happily call the function, but you must intercept it if you'd like the call to influence the front end. We do this in this project to have Gemini generate a storyboard, present it to the user and have a conversation about revisions. Without a synch the backend would create and never show it to the user, or show revisions. 
+
+Compounding this challenge is the occasional malformed function call request, or a call that does not include required fields. ( You can see our solution to this portion of the challenge in the main.py ```receive_from_gemini``` function. )
+
+As for the frontend coordination, after performing a series of validation steps, if the function call is valid we send the call up to the frontend via the websocket connection: 
+
+
+```python
+    if validation_result.get("result") is True:
+        # send the steps to the frontend to display, and ask for user feedback on them
+        logger.info(
+            f"DEBUG: Validation passed, sending {len(normalized_steps)} steps to frontend"
+        )
+        storyboard_data = {
+            "type": "storyboard_steps",
+            "payload": normalized_steps,
+        }
+        loop = asyncio.get_event_loop()
+        loop.create_task(
+            websocket.send_json(storyboard_data)
+        )
+    else:
+        logger.error(
+            f"ERROR: Validation failed, asking Gemini to retry: {validation_result.get('errors')}"
+        )
+```
+Where the frontend captures it as a signal that it's time to move on to revisions. 
+
+
+## Audio setup
+We purposefully used a React PWA to be able to use native javascript audio capabilities. There are some niuances for the Gemini Live api. 
+
+```javascript
+            const audioConstraints = {
+                sampleRate: 16000, // Gemini expects 16kHz audio
+                // echoCancellation: true,
+                // noiseSuppression: true,
+                // autoGainControl: true,
+            };
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+            streamRef.current = stream;
+
+            // Use Gemini's expected sample rate of 16kHz for better compatibility and performance
+            const audioContext = new window.AudioContext({
+                latencyHint: "interactive",
+                sampleRate: 16000
+            });
+```
+Gemini expects 16kHz audio while browsers will usually default to higher resolution like 44.1 or even 48kHz. A mismatch can cause unexpected glitching if the user enables/disables the microphone while Gemini is speaking, so it's best to set the resolution for capture/playback to match. 
+
+However Gemini outputs at 24k. Important to consider this in the conversion from pcm16. 
+
+```javascript
+        // Gemini outputs at 24k
+        const audioBuffer = audioContextRef.current.createBuffer(1, pcm16.length, 24000);
+        const channelData = audioBuffer.getChannelData(0);
+
+        for (let i = 0; i < pcm16.length; i++) {
+            channelData[i] = pcm16[i] / 0x8000;
+        }
+
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+```

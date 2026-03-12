@@ -162,15 +162,17 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
 
     const playAudio = async (arrayBuffer: ArrayBuffer) => {
         if (!audioContextRef.current) {
+            console.log("Creating new AudioContext for playback");
             audioContextRef.current = new window.AudioContext({
                 latencyHint: "interactive",
-                sampleRate: 24000
+                sampleRate: 16000
             });
         }
 
         const pcm16 = new Int16Array(arrayBuffer);
         if (pcm16.length === 0) return; // Guard against empty chunks
 
+        // Gemini outputs at 24k
         const audioBuffer = audioContextRef.current.createBuffer(1, pcm16.length, 24000);
         const channelData = audioBuffer.getChannelData(0);
 
