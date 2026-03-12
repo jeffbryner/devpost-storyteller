@@ -93,7 +93,21 @@ def generate_storyboard_image(steps: list, theme: str):
         logger.info(f"Generating storyboard image with prompt: {prompt}")
         # use a project with quota/apikey for the image model
         ai_image_client = genai.Client(
-            vertexai=True, api_key=os.environ.get("GOOGLE_CLOUD_IMAGE_API_KEY")
+            vertexai=True,
+            api_key=os.environ.get(
+                "GOOGLE_CLOUD_IMAGE_API_KEY",
+            ),
+            http_options=types.HttpOptions(
+                retry_options=types.HttpRetryOptions(
+                    initial_delay=1.2,
+                    attempts=5,
+                    exp_base=2,
+                    max_delay=10,
+                    jitter=0.5,
+                    http_status_codes=[408, 429, 500, 502, 503, 504],
+                ),
+                timeout=120 * 1000,
+            ),
         )
         response = ai_image_client.models.generate_content_stream(
             model=IMAGE_MODEL,
