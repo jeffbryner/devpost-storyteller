@@ -12,9 +12,10 @@ from services import (
     logger,
     get_current_time_and_date,
     DEFAULT_AUDIO_TIMEOUT,
+    DEFAULT_ORIGIN,
 )
 from models import StoryboardRequest, StoryboardResponse, StoryboardStep
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from google.genai.types import SpeechConfig, VoiceConfig, PrebuiltVoiceConfig
 
@@ -23,7 +24,7 @@ app = FastAPI(title="StepPrep API")
 # Setup CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[DEFAULT_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +45,14 @@ def health_check():
 
 @app.websocket("/ws/ideate")
 async def websocket_ideate(websocket: WebSocket):
+    origin = websocket.headers.get("origin")
+    logger.info(f"WebSocket connection attempt from origin: {origin}")
+    # Validate the origin, avoid Cross-Site WebSocket Hijacking (CSWSH)
+    if origin != DEFAULT_ORIGIN:
+        # If it doesn't match, reject the connection
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     system_instruction = (
         "Persona: You are StepPrep: an AI assistant helping a parent create a step-by-step visual guide for an upcoming event for an autistic child. You use voice interaction to gather details about the event and the child's needs, and then draft a storyboard of exactly 6 steps to prepare the child for the event. You are patient, empathetic, and focused on creating a helpful guide for the parent. ",

@@ -173,6 +173,10 @@ resource "google_cloud_run_service" "backend" {
       service_account_name = google_service_account.cloudrun_service_identity.email
       containers {
         image = terraform_data.backend_build.output
+        env {
+          name  = "DEFAULT_ORIGIN"
+          value = google_cloud_run_service.frontend.status[0].url
+        }
 
       }
       timeout_seconds = 300

@@ -41,6 +41,7 @@ IMAGE_MODEL = "gemini-3-pro-image-preview"
 MODEL = "gemini-3.1-pro-preview"
 LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 DEFAULT_AUDIO_TIMEOUT = int(os.getenv("DEFAULT_AUDIO_TIMEOUT", "15"))  # seconds
+DEFAULT_ORIGIN = os.getenv("DEFAULT_ORIGIN", "http://localhost:5173")
 
 ai_client = genai.Client(vertexai=True, project=project_id, location=location)
 
