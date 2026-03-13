@@ -9,6 +9,7 @@ module "gcp_project_setup" {
 
 locals {
   project_id      = module.gcp_project_setup.project_id
+  project_number  = module.gcp_project_setup.project_number
   location        = var.default_region
   service_name    = "storyteller"
   cloudbuild_sa   = "serviceAccount:${module.gcp_project_setup.cloudbuild_sa.email}"
@@ -173,9 +174,11 @@ resource "google_cloud_run_service" "backend" {
       service_account_name = google_service_account.cloudrun_service_identity.email
       containers {
         image = terraform_data.backend_build.output
+        // environment variable to tell backend the expected origin for CORS and WebSocket connections, set to the frontend URL
+        // construct the url manually to avoid terraform cycle errors
         env {
           name  = "DEFAULT_ORIGIN"
-          value = google_cloud_run_service.frontend.status[0].url
+          value = "https://${local.service_name}-frontend-${local.project_number}.${local.location}.run.app"
         }
 
       }

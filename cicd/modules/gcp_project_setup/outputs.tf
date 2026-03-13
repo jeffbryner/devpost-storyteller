@@ -3,6 +3,11 @@ output "project_id" {
   value       = data.google_project.target_project.project_id
 }
 
+output "project_number" {
+  description = "The number of the created project."
+  value       = data.google_project.target_project.number
+}
+
 output "cloudbuild_service_account_email" {
   description = "The email of the Cloud Build service account."
   value       = google_service_account.cloudbuild_sa.email
