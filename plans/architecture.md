@@ -136,7 +136,7 @@ Before turning things over to the CICD pipeline, you will need to set the state 
 Rename backend.tf.inert to backend.tf to enable state to be stored in the bucket created in the bootstrap step. 
 
 Then re-init terraform to allow it to transfer state to GCS: 
-From /cicd/dev and /cicd/prod (once you have dev working)
+From the /cicd/prod directory
 ```
 terraform init -force-copy -backend-config="bucket=<name of the bucket from terraform -output>"
 ```
@@ -147,12 +147,9 @@ Create a text file with  the following variables:
 (don't include the <> brackets, but do enclose in quotes) 
 
 ```
-org_id          = "<your gcp org id number>"
-billing_account = "<your billing account GUID>"
-project_name    = "<your friendly name for the project>"
-folder_id       = "<the integer number of the folder where youd like the project to live>"
+project_name    = "<your full name for the project>"
 github_org      = "<your githug org name>"
-github_repo     = "<the github repo you want to use>"
+github_repo     = "<the github repo you want to pull code from>"
 bucket          = "<name of the bucket from terraform -output>"
 ```
 In the GCP console for secret manager https://console.cloud.google.com/security/secret-manager
@@ -164,7 +161,7 @@ Triggers for cloudbuild can be created directly in the cloudbuild console allowi
 
 
 ## Manual Google Cloud Setup
-To ensure your Google Cloud project has all the necessary services enabled for the backend, Gemini generation, and future deployment, you can run the following `gcloud` commands:
+If you'd rather avoid terraform, you can ensure your Google Cloud project has all the necessary services enabled for the backend, Gemini generation, and future deployment, you can run the following `gcloud` commands:
 
 ### 1. Set your target project
 Ensure your CLI is pointed to the correct project:
