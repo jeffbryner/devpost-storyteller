@@ -11,10 +11,8 @@ resource "random_id" "suffix" {
 }
 
 locals {
-  project_name          = "prj-${var.project_name}"
-  project_id            = "prj-${var.project_name}"
-  project_org_id        = var.folder_id != "" ? null : var.org_id
-  project_folder_id     = var.folder_id != "" ? var.folder_id : null
+  project_name          = var.project_name
+  project_id            = var.project_name
   state_bucket_name     = format("bkt-%s-%s", "tfstate", local.project_id)
   art_bucket_name       = format("bkt-%s-%s", "artifacts", local.project_id)
   cloudbuild_default_sa = "serviceAccount:${data.google_project.target_project.number}-compute@developer.gserviceaccount.com"
@@ -91,7 +89,6 @@ resource "google_project_iam_member" "sa_roles" {
     "roles/developerconnect.user",              # enable terraform to reference repos
     "roles/iam.serviceAccountAdmin",            # manage service accounts
     "roles/artifactregistry.admin",             # create and manage artifact registry repos
-    "roles/run.admin",                          # manage cloud run services
   ])
 
   project    = local.project_id

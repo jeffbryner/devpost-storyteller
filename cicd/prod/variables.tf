@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Project name of the devops project to host CI/CD resources"
+  description = "Project ID/name of the existing GCP Project"
   type        = string
   default     = ""
 }
@@ -20,36 +20,14 @@ variable "default_region" {
   default     = "us-central1"
 }
 
-variable "org_id" {
-  description = "GCP Organization ID"
+# Dummy variable (never used in resources)
+# we fill it at terraform apply time from the GCP Secret tfvars to avoid hardcoding the bucket name in code and having it end up in a github repo
+# used in cloudbuild.yaml, cloudbuild-apply.yaml 
+variable "bucket" {
+  description = "GCS bucket name for terraform remote state storage."
   type        = string
   default     = ""
 }
-
-variable "folder_id" {
-  description = "The ID of a folder to host this project"
-  type        = string
-  default     = ""
-}
-
-variable "billing_account" {
-  description = "The ID of the billing account to associate this project with"
-  type        = string
-}
-
-variable "parent_folder" {
-  description = "GCP parent folder ID in the form folders/{id}"
-  default     = ""
-  type        = string
-}
-
-variable "project_labels" {
-  description = "Labels to apply to the project."
-  type        = map(string)
-  default     = {}
-}
-
-variable "bucket" {} # Dummy variable (never used in resources)
 
 variable "service_name" {
   description = "The name of your cloud run service"

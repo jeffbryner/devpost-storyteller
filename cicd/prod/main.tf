@@ -1,12 +1,8 @@
 module "gcp_project_setup" {
-  source          = "../modules/gcp_project_setup"
-  environment     = "prod"
-  project_name    = var.project_name
-  default_region  = var.default_region
-  org_id          = var.org_id
-  folder_id       = var.folder_id
-  billing_account = var.billing_account
-  project_labels  = var.project_labels
+  source         = "../modules/gcp_project_setup"
+  project_name   = var.project_name
+  default_region = var.default_region
+
 
 }
 
@@ -17,6 +13,7 @@ locals {
   service_name    = "storyteller"
   cloudbuild_sa   = "serviceAccount:${module.gcp_project_setup.cloudbuild_sa.email}"
   gar_repo_name   = "prj-containers" #container artifact registry repository
+  tf_bucket       = var.bucket       # established here but unused, only so terraform doesn't complain about unused variable.
   art_bucket_name = format("bkt-%s-%s", "artifacts", local.project_id)
   # bucket where the storyboards are held {PROJECT_ID}.firebasestorage.app
   storyboard_bucket_name = format("%s.firebasestorage.app", local.project_id)
@@ -79,7 +76,7 @@ resource "terraform_data" "backend_build" {
   }
 }
 # Ideally triggers are deployed using terraform.
-# Currently blocked by: │ Error: Error creating Trigger: googleapi: Error 400: Request contains an invalid argument.
+# Currently blocked by bug in TF provider: │ Error: Error creating Trigger: googleapi: Error 400: Request contains an invalid argument.
 # Create manually for now.
 # resource "google_cloudbuild_trigger" "deploy_trigger" {
 #   name        = "deploy-branch"
