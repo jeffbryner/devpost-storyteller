@@ -175,10 +175,12 @@ resource "google_cloud_run_service" "backend" {
       containers {
         image = terraform_data.backend_build.output
         // environment variable to tell backend the expected origin for CORS and WebSocket connections, set to the frontend URL
-        // construct the url manually to avoid terraform cycle errors
+        // if using your own cloud run, uncomment to construct the url manually to avoid terraform cycle errors
+        // pinned to my prod domain.
         env {
-          name  = "DEFAULT_ORIGIN"
-          value = "https://${local.service_name}-frontend-${local.project_number}.${local.location}.run.app"
+          name = "DEFAULT_ORIGIN"
+          // value = "https://${local.service_name}-frontend-${local.project_number}.${local.location}.run.app"
+          value = "https://stepprep.jeffbryner.com"
         }
 
       }
