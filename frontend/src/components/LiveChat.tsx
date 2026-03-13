@@ -106,9 +106,9 @@ export const LiveChat: React.FC<LiveChatProps> = ({ onStepsReceived, isGeneratin
         try {
             const audioConstraints = {
                 sampleRate: 16000, // Gemini expects 16kHz audio
-                // echoCancellation: true,
-                // noiseSuppression: true,
-                // autoGainControl: true,
+                echoCancellation: true, // reduce the chance of picking up assistant's own audio and hallucinating
+                noiseSuppression: true,
+                autoGainControl: true,
             };
             const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
             streamRef.current = stream;
