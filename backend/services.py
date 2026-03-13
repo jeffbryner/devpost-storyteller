@@ -8,7 +8,6 @@ from google.genai import types
 import google.auth
 import logging
 from datetime import datetime
-
 from dotenv import load_dotenv
 
 logging.basicConfig(
@@ -20,6 +19,7 @@ logging.basicConfig(
 logging.getLogger("websockets").setLevel(logging.INFO)
 logger = logging.getLogger()
 
+# to facilitate local development, load environment variables from .env file
 load_dotenv()
 credentials, PROJECT_ID = google.auth.default()
 
@@ -29,12 +29,8 @@ firebase_app = firebase_admin.initialize_app()
 db: FirestoreClient = firestore.client()
 # Note: storage.bucket() requires a default bucket name configured or passed explicitly,
 # We will use the default bucket initialization here.
-bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")
+storage_bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")
 
-# Initialize Google GenAI (Vertex AI) client
-# Project: prj-devpost-athon-adf
-project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
 
 # Settings
 IMAGE_MODEL = "gemini-3-pro-image-preview"
@@ -43,7 +39,9 @@ LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 DEFAULT_AUDIO_TIMEOUT = int(os.getenv("DEFAULT_AUDIO_TIMEOUT", "15"))  # seconds
 DEFAULT_ORIGIN = os.getenv("DEFAULT_ORIGIN", "http://localhost:5173")
 
-ai_client = genai.Client(vertexai=True, project=project_id, location=location)
+# Initialize Google GenAI (Vertex AI) client
+location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+ai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=location)
 
 
 def get_current_time_and_date() -> str:

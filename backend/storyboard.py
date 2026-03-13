@@ -1,5 +1,4 @@
 from typing import cast
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from google.cloud.firestore_v1.base_document import DocumentSnapshot
@@ -9,7 +8,7 @@ import datetime
 import json
 from services import (
     db,
-    bucket,
+    storage_bucket,
     generate_storyboard_image,
     get_grid_dimensions,
     logger,
@@ -49,7 +48,7 @@ async def create_storyboard(request: StoryboardRequest):
 
                     # Upload to Cloud Storage
                     image_filename = f"storyboards/{storyboard_id}/storyboard.jpg"
-                    blob = bucket.blob(image_filename)
+                    blob = storage_bucket.blob(image_filename)
                     blob.upload_from_string(image_bytes, content_type="image/jpeg")
 
                     storyboard_image_url = blob.public_url
