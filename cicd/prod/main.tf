@@ -244,7 +244,35 @@ resource "google_cloud_run_service_iam_policy" "noauth_frontend" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
+# secrets used by the application
+resource "google_secret_manager_secret" "gemini_image_api_key" {
+  secret_id = "gemini_image_api_key"
+  project   = local.project_id
+
+  labels = {
+    label = "gemini_image_api_key"
+  }
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.default_region
+      }
+    }
+  }
+  depends_on = [
+    google_project_service.services
+  ]
+}
+
 # permissions
+# allow the  service account to access secretes
+resource "google_project_iam_member" "secret_access" {
+  provider = google-beta
+  project  = local.project_id
+  role     = "roles/secretmanager.secretAccessor"
+  member   = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
+}
 
 # allow the  service account to access AI
 resource "google_project_iam_member" "ai_access" {
