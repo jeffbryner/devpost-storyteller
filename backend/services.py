@@ -34,6 +34,29 @@ db: FirestoreClient = firestore.client()
 storage_bucket = storage.bucket(f"{PROJECT_ID}.firebasestorage.app")
 
 
+def get_secret(project_id, secret_id, version_id="latest"):
+    """
+    Access the payload for the given secret version if one exists. The version
+    can be a version number as a string (e.g. "5") or an alias (e.g. "latest").
+    """
+    secret_client = secretmanager.SecretManagerServiceClient()
+
+    # Build the resource name of the secret version.
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+
+    # Access the secret version.
+    response = secret_client.access_secret_version(request={"name": name})
+
+    # Verify payload checksum.
+    crc32c = google_crc32c.Checksum()
+    crc32c.update(response.payload.data)
+    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
+        logger.error(f"Data corruption detected when retrieving secret {secret_id}.")
+        return "error"
+    payload = response.payload.data.decode("UTF-8")
+    return f"{payload}"
+
+
 # Settings
 IMAGE_MODEL = "gemini-3-pro-image-preview"
 MODEL = "gemini-3.1-pro-preview"
@@ -163,26 +186,3 @@ def generate_storyboard_image(steps: list, theme: str):
             f"generate_storyboard_image: Error generating storyboard image: {e}"
         )
         yield {"type": "error", "content": str(e)}
-
-
-def get_secret(project_id, secret_id, version_id="latest"):
-    """
-    Access the payload for the given secret version if one exists. The version
-    can be a version number as a string (e.g. "5") or an alias (e.g. "latest").
-    """
-    secret_client = secretmanager.SecretManagerServiceClient()
-
-    # Build the resource name of the secret version.
-    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-
-    # Access the secret version.
-    response = secret_client.access_secret_version(request={"name": name})
-
-    # Verify payload checksum.
-    crc32c = google_crc32c.Checksum()
-    crc32c.update(response.payload.data)
-    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
-        logger.error(f"Data corruption detected when retrieving secret {secret_id}.")
-        return "error"
-    payload = response.payload.data.decode("UTF-8")
-    return f"{payload}"
