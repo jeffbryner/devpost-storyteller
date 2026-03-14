@@ -124,6 +124,8 @@ def generate_storyboard_image(steps: list, theme: str):
         ai_image_client = genai.Client(
             vertexai=True,
             api_key=GEMINI_IMAGE_API_KEY,
+            project=PROJECT_ID,
+            credentials=credentials,
             http_options=types.HttpOptions(
                 retry_options=types.HttpRetryOptions(
                     initial_delay=1.2,
