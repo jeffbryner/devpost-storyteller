@@ -75,15 +75,14 @@ resource "google_service_account" "cloudbuild_sa" {
 # We iterate over a list of roles so we don't repeat code blocks.
 resource "google_project_iam_member" "sa_roles" {
   for_each = toset([
-    "roles/run.admin",                       # Deploy Cloud Run services
-    "roles/iam.serviceAccountUser",          # Attach identities to Cloud Run services
-    "roles/storage.admin",                   # Manage GCS buckets, Read/Write Terraform state files
-    "roles/logging.logWriter",               # Write build logs
-    "roles/cloudbuild.builds.editor",        # Cloud Build Editor role
-    "roles/cloudbuild.builds.builder",       # Cloud Build Builder role
-    "roles/resourcemanager.projectIamAdmin", # Modify IAM policies (if TF manages IAM)
-    "roles/secretmanager.secretAccessor",    # Access secrets from Secret Manager
-    "roles/secretmanager.viewer",
+    "roles/run.admin",                          # Deploy Cloud Run services
+    "roles/iam.serviceAccountUser",             # Attach identities to Cloud Run services
+    "roles/storage.admin",                      # Manage GCS buckets, Read/Write Terraform state files
+    "roles/logging.logWriter",                  # Write build logs
+    "roles/cloudbuild.builds.editor",           # Cloud Build Editor role
+    "roles/cloudbuild.builds.builder",          # Cloud Build Builder role
+    "roles/resourcemanager.projectIamAdmin",    # Modify IAM policies (if TF manages IAM)
+    "roles/secretmanager.admin",                # Secret Manager
     "roles/serviceusage.serviceUsageAdmin",     # Enable Cloud Build SA to list and enable APIs in the project.
     "roles/developerconnect.readTokenAccessor", # enable terrafor to read tokens for cloudbuild triggers.
     "roles/developerconnect.user",              # enable terraform to reference repos
