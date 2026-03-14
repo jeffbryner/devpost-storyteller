@@ -7,3 +7,5 @@ websockets>=13.0
 google-genai
 google-auth
 dotenv
+google-crc32c
+google-cloud-secret-manager

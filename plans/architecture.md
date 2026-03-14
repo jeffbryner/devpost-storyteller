@@ -92,8 +92,7 @@ flowchart TB
 
 ## Project Logistics for Agents
    * You have a CLI ticketing tool available to you called `tk`. `tk --help`` for instructions on how to use it to plan tasks, mark them in progress, update them and mark them done as needed.
-   * The current directory 'devpost' is initialized with a python virtual environment via `uv`. Please always use this virtual environment or uv for executing, installilng any python libraries. 
-   * There is a dedicated google cloud project for this named: prj-devpost-athon-adf
+   * The current directory is initialized with a python virtual environment via `uv`. Please always use this virtual environment or uv for executing, installilng any python libraries. 
    * If you need to pick a google cloud region please use us-central1
    * The project does not have any services enabled, you can use gcloud commands to enable and deploy services as needed. 
    * When using firestore, please use the 'default' database to make use of the free tier provided by firestore. 
@@ -206,10 +205,13 @@ uv pip install -r requirements.txt
 # Ensure you have your Google Cloud credentials set up
 # You can authenticate via the gcloud CLI if you haven't already:
 # gcloud auth application-default login
-# gcloud config set project prj-devpost-athon-adf
-
-# Alternatively, export your Gemini API key if using the developer API:
-# export GEMINI_API_KEY="your-api-key"
+# gcloud config set project <YOUR_PROJECT>
+# You will need a gemini api key to be able to reliably create images.
+# Get one via aistudio.gemini.com and either place it in a local .env file as 
+# GEMINI_IMAGE_API_KEY=AI......
+# or add it as the 'latest' secret in secret manager
+# Terraform will have created a secret, but not the value. You can add it via: 
+# https://console.cloud.google.com/security/secret-manager
 
 # Start the server
 uvicorn main:app --reload --port 8000

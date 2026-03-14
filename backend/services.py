@@ -6,6 +6,8 @@ from google.cloud.firestore_v1.client import Client as FirestoreClient
 from google import genai
 from google.genai import types
 import google.auth
+from google.cloud import secretmanager
+import google_crc32c
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
@@ -38,6 +40,11 @@ MODEL = "gemini-3.1-pro-preview"
 LIVE_MODEL = "gemini-live-2.5-flash-native-audio"
 DEFAULT_AUDIO_TIMEOUT = int(os.getenv("DEFAULT_AUDIO_TIMEOUT", "15"))  # seconds
 DEFAULT_ORIGIN = os.getenv("DEFAULT_ORIGIN", "http://localhost:5173")
+GEMINI_IMAGE_API_KEY = os.getenv("GEMINI_IMAGE_API_KEY", None)
+if not GEMINI_IMAGE_API_KEY:
+    logger.info("Gathering GEMINI_IMAGE_API_KEY from secret manager")
+    GEMINI_IMAGE_API_KEY = get_secret(PROJECT_ID, "gemini_image_api_key")
+
 
 # Initialize Google GenAI (Vertex AI) client
 location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
@@ -93,9 +100,7 @@ def generate_storyboard_image(steps: list, theme: str):
         # use a project with quota/apikey for the image model
         ai_image_client = genai.Client(
             vertexai=True,
-            api_key=os.environ.get(
-                "GOOGLE_CLOUD_IMAGE_API_KEY",
-            ),
+            api_key=GEMINI_IMAGE_API_KEY,
             http_options=types.HttpOptions(
                 retry_options=types.HttpRetryOptions(
                     initial_delay=1.2,
@@ -158,3 +163,26 @@ def generate_storyboard_image(steps: list, theme: str):
             f"generate_storyboard_image: Error generating storyboard image: {e}"
         )
         yield {"type": "error", "content": str(e)}
+
+
+def get_secret(project_id, secret_id, version_id="latest"):
+    """
+    Access the payload for the given secret version if one exists. The version
+    can be a version number as a string (e.g. "5") or an alias (e.g. "latest").
+    """
+    secret_client = secretmanager.SecretManagerServiceClient()
+
+    # Build the resource name of the secret version.
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+
+    # Access the secret version.
+    response = secret_client.access_secret_version(request={"name": name})
+
+    # Verify payload checksum.
+    crc32c = google_crc32c.Checksum()
+    crc32c.update(response.payload.data)
+    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
+        logger.error(f"Data corruption detected when retrieving secret {secret_id}.")
+        return "error"
+    payload = response.payload.data.decode("UTF-8")
+    return f"{payload}"

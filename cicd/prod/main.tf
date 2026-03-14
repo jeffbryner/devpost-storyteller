@@ -260,9 +260,7 @@ resource "google_secret_manager_secret" "gemini_image_api_key" {
       }
     }
   }
-  depends_on = [
-    google_project_service.services
-  ]
+
 }
 
 # permissions
