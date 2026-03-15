@@ -24,6 +24,9 @@ logger = logging.getLogger()
 # to facilitate local development, load environment variables from .env file
 load_dotenv()
 credentials, PROJECT_ID = google.auth.default()
+# help out other google libraries that expect an env variable for the project id to be set, such as the storage library used for firebase storage interactions
+if PROJECT_ID:
+    os.environ["GOOGLE_CLOUD_PROJECT"] = PROJECT_ID
 
 # Initialize Firebase Admin
 # Defaults to using GOOGLE_APPLICATION_CREDENTIALS or Compute Engine environment

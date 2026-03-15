@@ -49,9 +49,9 @@ We purposefully used a React PWA to be able to use native javascript audio capab
 ```javascript
             const audioConstraints = {
                 sampleRate: 16000, // Gemini expects 16kHz audio
-                // echoCancellation: true,
-                // noiseSuppression: true,
-                // autoGainControl: true,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
             };
             const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
             streamRef.current = stream;
@@ -79,3 +79,44 @@ However Gemini outputs at 24k. Important to consider this in the conversion from
         source.buffer = audioBuffer;
         source.connect(audioContextRef.current.destination);
 ```
+
+
+## API KEY vs Vertex/Project
+There are significant differences between using the google-genai library with an API key from aistudio.google.com and using Vertex. 
+
+Some parameters aren't allowed when using an API Key. In particular the image configuration has limits for person_generation and for the output mime type. 
+```
+            ai_image_client = genai.Client(
+                vertexai=False,
+                api_key=GEMINI_IMAGE_API_KEY,
+                http_options=types.HttpOptions(
+                    retry_options=types.HttpRetryOptions(
+                        initial_delay=1.2,
+                        attempts=5,
+                        exp_base=2,
+                        max_delay=10,
+                        jitter=0.5,
+                        http_status_codes=[408, 429, 500, 502, 503, 504],
+                    ),
+                    timeout=120 * 1000,
+                ),
+            )
+            image_configuration = types.ImageConfig(
+                # person_generation="ALLOW_ALL",  # NOTE: person generation is currently not allowed with API key auth
+                image_size="1K",
+                # output_mime_type="image/png",   # NOTE: also not allowed with api auth
+            )
+```
+
+A vertex enabled call to create an image via gemini 3 pro/nano bananna looks like this: 
+```
+2026-03-15 07:39:22,607 - INFO - HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/prj-something-or-other/locations/global/publishers/google/models/gemini-3-pro-image-preview:streamGenerateContent?alt=sse "HTTP/1.1 200 OK"
+```
+
+An api key call looks like this: 
+```
+2026-03-15 17:29:36,740 - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:streamGenerateContent?alt=sse "HTTP/1.1 200 OK"
+
+```
+
+Though it appears both can encounter 429: resource exhaustion errors it appears the API Key calls encounter this obstacle less frequently than calls that don't use an API Key and use vertex natively. I found better success by setting the HTTP retry options in either case. Calls were more resilient to encountering 429s and continuing to retry. 
