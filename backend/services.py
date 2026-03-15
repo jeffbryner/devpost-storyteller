@@ -66,7 +66,11 @@ DEFAULT_ORIGIN = os.getenv("DEFAULT_ORIGIN", "http://localhost:5173")
 GEMINI_IMAGE_API_KEY = os.getenv("GEMINI_IMAGE_API_KEY", None)
 if not GEMINI_IMAGE_API_KEY:
     logger.info("Gathering GEMINI_IMAGE_API_KEY from secret manager")
-    GEMINI_IMAGE_API_KEY = get_secret(PROJECT_ID, "gemini_image_api_key")
+    try:
+        GEMINI_IMAGE_API_KEY = get_secret(PROJECT_ID, "gemini_image_api_key")
+    except Exception as e:
+        logger.error(f"Error retrieving GEMINI_IMAGE_API_KEY from Secret Manager: {e}")
+        GEMINI_IMAGE_API_KEY = None
 
 
 # Initialize Google GenAI (Vertex AI) client
@@ -120,23 +124,67 @@ def generate_storyboard_image(steps: list, theme: str):
         )
 
         logger.info(f"Generating storyboard image with prompt: {prompt}")
-        # use a project with quota/apikey for the image model
-        ai_image_client = genai.Client(
-            vertexai=True,
-            project=PROJECT_ID,
-            credentials=credentials,
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(
-                    initial_delay=1.2,
-                    attempts=5,
-                    exp_base=2,
-                    max_delay=10,
-                    jitter=0.5,
-                    http_status_codes=[408, 429, 500, 502, 503, 504],
-                ),
-                timeout=120 * 1000,
+        ai_image_client = None
+        # create a default image configuration, which may be overridden if using API key auth,
+        # which has different capabilities and limits.
+        # Notably, person generation and output mime type settings are not currently allowed with API key auth,
+        # likely due to safety settings, so we set the defaults to allow person generation but not specify an output mime type, which will default to image/png.
+        image_configuration = (
+            types.ImageConfig(
+                # person_generation="ALLOW_ALL",
+                image_size="1K",
+                # output_mime_type="image/png",
             ),
         )
+        if GEMINI_IMAGE_API_KEY:
+            logger.info(
+                "Using GEMINI_IMAGE_API_KEY for authentication with GenAI client."
+            )
+            ai_image_client = genai.Client(
+                vertexai=False,
+                api_key=GEMINI_IMAGE_API_KEY,
+                http_options=types.HttpOptions(
+                    retry_options=types.HttpRetryOptions(
+                        initial_delay=1.2,
+                        attempts=5,
+                        exp_base=2,
+                        max_delay=10,
+                        jitter=0.5,
+                        http_status_codes=[408, 429, 500, 502, 503, 504],
+                    ),
+                    timeout=120 * 1000,
+                ),
+            )
+            image_configuration = types.ImageConfig(
+                # person_generation="ALLOW_ALL",  # NOTE: person generation is currently not allowed with API key auth
+                image_size="1K",
+                # output_mime_type="image/png",   # NOTE: also not allowed with api auth
+            )
+
+        else:
+            # use a project with quota
+            logger.info("Using vertex authentication with GenAI client.")
+            ai_image_client = genai.Client(
+                vertexai=True,
+                project=PROJECT_ID,
+                credentials=credentials,
+                http_options=types.HttpOptions(
+                    retry_options=types.HttpRetryOptions(
+                        initial_delay=1.2,
+                        attempts=5,
+                        exp_base=2,
+                        max_delay=10,
+                        jitter=0.5,
+                        http_status_codes=[408, 429, 500, 502, 503, 504],
+                    ),
+                    timeout=120 * 1000,
+                ),
+            )
+            image_configuration = types.ImageConfig(
+                person_generation="ALLOW_ALL",  # person generation is allowed in vertex
+                image_size="1K",
+                output_mime_type="image/png",
+            )
         response = ai_image_client.models.generate_content_stream(
             model=IMAGE_MODEL,
             contents=[prompt],
@@ -161,11 +209,7 @@ def generate_storyboard_image(steps: list, theme: str):
                         threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
                     ),
                 ],
-                image_config=types.ImageConfig(
-                    person_generation="ALLOW_ALL",
-                    image_size="1K",
-                    output_mime_type="image/png",
-                ),
+                image_config=image_configuration,
             ),
         )
 
