@@ -1,9 +1,11 @@
-# Event Storyboarding Application Architecture
+# StepPrep Application Architecture
 
 ## Overview
-A multimodal application designed to help parents with children on the austism spectrum prepare for upcoming events by generating visual storyboards. Storyboarding helps the child understand what is happening, the steps involved and allows everyone to anticipate challenges before they arise. 
+StepPrep is a multimodal application designed to help parents with children on the austism spectrum prepare for upcoming events by generating visual storyboards. Storyboarding helps the child understand what is happening, the steps involved and allows everyone to anticipate challenges before they arise. 
 
 The app leverages Gemini 3's advanced multimodal capabilities (specifically the Gemini Live API for real-time audio/speech interaction, plus image generation) and is built entirely on Google Cloud serverless infrastructure.
+
+You can read more about it in [our blog post](https://blog.jeffbryner.com/2026/03/13/gemini-live-agent-challenge.html) or view a [short video of it in action](https://www.youtube.com/watch?v=ASKlwEXGUsc)!
 
 ## Tech Stack
 * **Frontend**: React (Progressive Web App - PWA) - Provides excellent out-of-the-box support for the Web Audio APIs and WebSockets required by the Gemini Live API, matching Google's primary implementation examples. Packaged as a PWA, it will still offer a native-like mobile experience for parents during the event.
