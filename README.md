@@ -1,4 +1,5 @@
-# StepPrep Application Architecture
+# StepPrep
+Multimedia collaboration with Gemini to create visual storyboards for children on the autism spectrum. 
 
 ## Overview
 StepPrep is a multimodal application designed to help parents with children on the austism spectrum prepare for upcoming events by generating visual storyboards. Storyboarding helps the child understand what is happening, the steps involved and allows everyone to anticipate challenges before they arise. 
